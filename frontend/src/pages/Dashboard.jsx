@@ -243,7 +243,7 @@ export default function Dashboard() {
         </div>
 
         {/* 🤖 KHU VỰC TRỢ LÝ TÀI CHÍNH THÔNG MINH AI */}
-        <div className="bg-gradient-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100 shadow-sm space-y-4">
+        <div className="bg-linear-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100 shadow-sm space-y-4">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center space-x-2">
               <div className="bg-purple-600 p-2 rounded-xl text-white animate-bounce">
