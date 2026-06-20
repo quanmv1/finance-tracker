@@ -1,0 +1,11 @@
+# Giấu thư mục thư viện thô của cả FE và BE
+node_modules/
+frontend/node_modules/
+backend/node_modules/
+
+# Giấu môi trường build sản phẩm của Vite
+frontend/dist/
+
+# Giấu mật khẩu database và chuỗi bí mật JWT
+.env
+backend/.env
