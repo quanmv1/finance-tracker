@@ -133,6 +133,9 @@ export default function Login() {
               theme="outline"
               size="large"
               width="100%"
+              type="standard"
+              text="signin_with"
+              useOneTap={false}
             />
           </div>
 
