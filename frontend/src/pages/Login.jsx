@@ -36,12 +36,16 @@ export default function Login() {
     }
   };
 
+  // Khai báo một biến tạm để giữ bộ đếm thời gian kiểm tra Adblock
+  let adblockCheckTimeout;
+
   const handleGoogleSuccess = useGoogleLogin({
-    flow: 'auth-code', // Ép buộc mở popup chọn tài khoản rõ ràng
+    flow: 'auth-code', 
     onSuccess: async (tokenResponse) => {
+      // Thành công -> Xóa bộ đếm thời gian kiểm tra Adblock ngay lập tức
+      clearTimeout(adblockCheckTimeout);
       setError('');
       try {
-        // Gửi mã 'code' do Google cấp trực tiếp lên Backend
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
           code: tokenResponse.code
         });
@@ -53,8 +57,26 @@ export default function Login() {
         setError(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.');
       }
     },
-    onError: () => setError('Không thể mở cửa sổ đăng nhập Google. Vui lòng kiểm tra và tạm thời tắt các tiện ích chặn quảng cáo (Adblock) nếu có!')
+    onError: () => {
+      // Xóa bộ đếm thời gian nếu Google tự ném lỗi công khai
+      clearTimeout(adblockCheckTimeout);
+      setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
+    }
   });
+
+  // Kích hoạt gọi popup đồng thời kích hoạt bộ đếm bắt lỗi Adblock ngầm
+  const handleGoogleClickWithCheck = () => {
+    setError('');
+    
+    // 1. Kích hoạt mở popup của thư viện
+    handleGoogleSuccess();
+
+    // 2. Chạy bộ đếm ngầm 1.5 giây. Nếu sau 1.5 giây hàm onSuccess không chạy để xóa bộ đếm này,
+    // chứng tỏ popup đã bị Adblock chặn đứng hoàn toàn làm đứng hình tiến trình.
+    adblockCheckTimeout = setTimeout(() => {
+      setError('Không thể mở cửa sổ đăng nhập Google. Vui lòng kiểm tra và tạm thời tắt các tiện ích chặn quảng cáo (Adblock) nếu có!');
+    }, 2500); 
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -133,7 +155,7 @@ export default function Login() {
           <div className="flex justify-center w-full">
             <button 
               type="button"
-              onClick={handleGoogleSuccess} 
+              onClick={handleGoogleClickWithCheck} 
               className="flex items-center justify-center gap-2 w-full py-2.5 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-sm transition-all"
             >
               {/* Icon Google SVG Chuẩn */}
