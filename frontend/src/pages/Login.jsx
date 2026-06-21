@@ -133,7 +133,7 @@ export default function Login() {
           <div className="flex justify-center w-full">
             <button 
               type="button"
-              onClick={() => handleGoogleSuccess()} 
+              onClick={handleGoogleSuccess} 
               className="flex items-center justify-center gap-2 w-full py-2.5 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-sm transition-all"
             >
               {/* Icon Google SVG Chuẩn */}
