@@ -54,7 +54,7 @@ export default function Register() {
     }
 
     try {
-      const response = await axios.post('${import.meta.env.VITE_API_URL}/api/auth/register', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
         username, email, password
       });
 
@@ -73,7 +73,7 @@ export default function Register() {
     setError('');
     setSuccessMessage('');
     try {
-      const response = await axios.post('${import.meta.env.VITE_API_URL}/api/auth/verify-otp', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
         email,
         otp
       });

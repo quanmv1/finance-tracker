@@ -21,7 +21,7 @@ export default function Login() {
 
     try {
       // Gửi request lên API mới của Backend (Chấp nhận cả email/username qua trường credential)
-      const response = await axios.post('${import.meta.env.VITE_API_URL}/api/auth/login', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
         credential,
         password
       });
@@ -40,7 +40,7 @@ export default function Login() {
     setError('');
     try {
       // Gửi cái Token mã hóa mà Google cấp lên cho Backend NodeJS xử lý
-      const response = await axios.post('${import.meta.env.VITE_API_URL}/api/auth/google-login', {
+      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
         googleToken: credentialResponse.credential
       });
 

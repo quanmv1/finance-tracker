@@ -66,7 +66,7 @@ export default function Dashboard() {
     const finalCategory = category === 'Other' ? (customCategory.trim() || 'Khác') : category;
 
     try {
-      await axios.post('${import.meta.env.VITE_API_URL}/api/transactions', {
+      await axios.post(`${import.meta.env.VITE_API_URL}/api/transactions`, {
         title, 
         amount: Number(amount), 
         type, 
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const handleUrlDeleteMultiple = async () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} giao dịch đã chọn?`)) {
       try {
-        const res = await axios.post('${import.meta.env.VITE_API_URL}/api/transactions/delete-multiple', { ids: selectedIds }, config);
+        const res = await axios.post(`${import.meta.env.VITE_API_URL}/api/transactions/delete-multiple`, { ids: selectedIds }, config);
         alert(res.data.message);
         fetchTransactions();
       } catch (err) {
