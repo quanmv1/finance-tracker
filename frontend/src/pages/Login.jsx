@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Wallet, Lock, User, Eye, EyeOff } from 'lucide-react'; // Thêm icon Eye để làm ẩn/hiện ẩn/hiện mật khẩu
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
-import { GoogleLogin } from '@react-oauth/google';
+import { useGoogleLogin } from '@react-oauth/google';
 
 export default function Login() {
   // 1. Khai báo các State quản lý dữ liệu nhập vào và trạng thái ẩn/hiện
@@ -36,21 +36,25 @@ export default function Login() {
     }
   };
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    setError('');
-    try {
-      // Gửi cái Token mã hóa mà Google cấp lên cho Backend NodeJS xử lý
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
-        googleToken: credentialResponse.credential
-      });
+  const handleGoogleSuccess = useGoogleLogin({
+    flow: 'auth-code', // Ép buộc mở popup chọn tài khoản rõ ràng
+    onSuccess: async (tokenResponse) => {
+      setError('');
+      try {
+        // Gửi mã 'code' do Google cấp trực tiếp lên Backend
+        const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
+          code: tokenResponse.code
+        });
 
-      if (response.data.success) {
-        login(response.data.user, response.data.token);
+        if (response.data.success) {
+          login(response.data.user, response.data.token);
+        }
+      } catch (err) {
+        setError(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.');
       }
-    } catch (err) {
-      setError(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.');
-    }
-  };
+    },
+    onError: () => setError('Đăng nhập bằng Google thất bại hoặc bị hủy.')
+  });
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
@@ -125,18 +129,22 @@ export default function Login() {
             <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Hoặc đăng nhập bằng</span></div>
           </div>
 
-          {/* ---- NÚT BẤM CỦA GOOGLE ĐƯỢC THƯ VIỆN VẼ TỰ ĐỘNG ---- */}
+          {/* ---- NÚT BẤM CỦA GOOGLE ---- */}
           <div className="flex justify-center w-full">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError('Lỗi kết nối với hệ thống Google')}
-              theme="outline"
-              size="large"
-              width="100%"
-              type="standard"
-              text="signin_with"
-              useOneTap={false}
-            />
+            <button 
+              type="button"
+              onClick={() => handleGoogleSuccess()} 
+              className="flex items-center justify-center gap-2 w-full py-2.5 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-sm transition-all"
+            >
+              {/* Icon Google SVG Chuẩn */}
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#EA4335" d="M12 5.04c1.65 0 3.13.57 4.3 1.69l3.21-3.2C17.56 1.77 14.97 1 12 1 7.35 1 3.39 3.65 1.5 7.5l3.86 3C6.31 7.55 8.94 5.04 12 5.04z"/>
+                <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.42 3.62l3.78 2.93c2.21-2.04 3.67-5.04 3.67-8.7z"/>
+                <path fill="#FBBC05" d="M5.36 14.5c-.24-.72-.38-1.49-.38-2.3s.14-1.58.38-2.3L1.5 6.9C.54 8.81 0 10.95 0 12s.54 3.19 1.5 5.1l3.86-3z"/>
+                <path fill="#34A853" d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.78-2.93c-1.05.7-2.4 1.13-4.18 1.13-3.06 0-5.69-2.51-6.64-5.46L1.48 15.8C3.37 19.65 7.33 23 12 23z"/>
+              </svg>
+              <span>Đăng nhập bằng Google</span>
+            </button>
           </div>
 
           <div className="mt-6 text-center">

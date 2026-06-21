@@ -5,7 +5,13 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer'); // Gọi thư viện gửi mail
 const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
-const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID); 
+
+// Khởi tạo client hỗ trợ cả Client Secret để đổi mã code lấy thông tin user
+const client = new OAuth2Client(
+  process.env.GOOGLE_CLIENT_ID,
+  process.env.GOOGLE_CLIENT_SECRET, 
+  'postmessage' 
+); 
 
 // Cấu hình "Trạm gửi thư" Nodemailer
 const transporter = nodemailer.createTransport({
@@ -144,27 +150,32 @@ router.post('/login', async (req, res) => {
 // API: ĐĂNG NHẬP / ĐĂNG KÝ NHANH BẰNG GOOGLE (POST)
 router.post('/google-login', async (req, res) => {
   try {
-    const { googleToken } = req.body;
+    // 1. Thay vì googleToken, bây giờ chúng ta nhận mã 'code' từ Frontend gửi lên
+    const { code } = req.body;
 
-    if (!googleToken) {
-      return res.status(400).json({ success: false, message: 'Không tìm thấy Token từ Google' });
+    if (!code) {
+      return res.status(400).json({ success: false, message: 'Không tìm thấy mã xác thực từ Google' });
     }
     
-    // Tiến hành giải mã Token gửi từ Frontend bằng thư viện của Google
+    // 2. Sử dụng mã 'code' này để thực hiện đổi lấy các Token quyền hạn từ máy chủ Google
+    const { tokens } = await client.getToken(code);
+    client.setCredentials(tokens);
+
+    // 3. Giải mã ID Token lấy được từ cục tokens để bóc tách thông tin cá nhân của User
     const ticket = await client.verifyIdToken({
-      idToken: googleToken,
-      audience: process.env.GOOGLE_CLIENT_ID // Ép đúng ID ứng dụng của mình mới cho qua
+      idToken: tokens.id_token,
+      audience: process.env.GOOGLE_CLIENT_ID
     });
 
     // Lấy ra các thông tin cá nhân thật của người dùng từ hệ thống Google
     const { email, name, picture } = ticket.getPayload();
 
-    // 1. Kiểm tra xem Email Google này đã tồn tại trong database chưa
+    // 4. Kiểm tra xem Email Google này đã tồn tại trong database chưa
     let user = await User.findOne({ email });
 
-    // 2. Nếu chưa có tài khoản, hệ thống tự động đăng ký luôn một tài khoản mới tinh (isVerified = true luôn)
+    // 5. Nếu chưa có tài khoản, hệ thống tự động đăng ký luôn một tài khoản mới tinh
     if (!user) {
-      // Tự sinh username ngẫu nhiên từ email (ví dụ nguyenvana@gmail.com $\rightarrow$ nguyenvana_gg)
+      // Tự sinh username ngẫu nhiên từ email (ví dụ nguyenvana@gmail.com -> nguyenvana_gg)
       const baseUsername = email.split('@')[0] + '_gg';
       
       // Tạo mật khẩu ngẫu nhiên ngầm vì họ đăng nhập bằng Google, không xài pass này
@@ -181,7 +192,7 @@ router.post('/google-login', async (req, res) => {
       await user.save();
     }
 
-    // 3. Nếu tài khoản đã tồn tại hoặc vừa tạo xong $\rightarrow$ Tiến hành cấp Token cá nhân (JWT) của dự án để đăng nhập
+    // 6. Nếu tài khoản đã tồn tại hoặc vừa tạo xong -> Tiến hành cấp Token cá nhân (JWT) của dự án để đăng nhập
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.status(200).json({
@@ -196,6 +207,7 @@ router.post('/google-login', async (req, res) => {
     });
 
   } catch (error) {
+    console.error('Lỗi xử lý Google Login Backend:', error);
     res.status(500).json({ success: false, message: 'Lỗi xác thực Google: ' + error.message });
   }
 });
