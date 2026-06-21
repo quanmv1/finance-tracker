@@ -53,7 +53,7 @@ export default function Login() {
         setError(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.');
       }
     },
-    onError: () => setError('Đăng nhập bằng Google thất bại hoặc bị hủy.')
+    onError: () => setError('Không thể mở cửa sổ đăng nhập Google. Vui lòng kiểm tra và tạm thời tắt các tiện ích chặn quảng cáo (Adblock) nếu có!')
   });
 
   return (
