@@ -45,7 +45,7 @@ export default function Dashboard() {
 
   const fetchTransactions = async () => {
     try {
-      const res = await axios.get(`http://localhost:5000/api/transactions?month=${filterMonth}&year=${filterYear}`, config);
+      const res = await axios.get(`${import.meta.env.VITE_API_URL}/api/transactions?month=${filterMonth}&year=${filterYear}`, config);
       setTransactions(res.data.data);
       setSelectedIds([]);
     } catch (err) {
@@ -66,7 +66,7 @@ export default function Dashboard() {
     const finalCategory = category === 'Other' ? (customCategory.trim() || 'Khác') : category;
 
     try {
-      await axios.post('http://localhost:5000/api/transactions', {
+      await axios.post('${import.meta.env.VITE_API_URL}/api/transactions', {
         title, 
         amount: Number(amount), 
         type, 
@@ -90,7 +90,7 @@ export default function Dashboard() {
   const handleDeleteOne = async (id) => {
     if (window.confirm('Bạn có chắc chắn muốn xóa khoản chi tiêu này?')) {
       try {
-        await axios.delete(`http://localhost:5000/api/transactions/${id}`, config);
+        await axios.delete(`${import.meta.env.VITE_API_URL}/api/transactions/${id}`, config);
         fetchTransactions();
       } catch (err) {
         alert('Lỗi khi xóa: ' + err.response?.data?.message);
@@ -101,7 +101,7 @@ export default function Dashboard() {
   const handleUrlDeleteMultiple = async () => {
     if (window.confirm(`Bạn có chắc chắn muốn xóa ${selectedIds.length} giao dịch đã chọn?`)) {
       try {
-        const res = await axios.post('http://localhost:5000/api/transactions/delete-multiple', { ids: selectedIds }, config);
+        const res = await axios.post('${import.meta.env.VITE_API_URL}/api/transactions/delete-multiple', { ids: selectedIds }, config);
         alert(res.data.message);
         fetchTransactions();
       } catch (err) {
@@ -131,7 +131,7 @@ export default function Dashboard() {
     setAiAdvice('');
     try {
       const res = await axios.get(
-        `http://localhost:5000/api/transactions/analyze-ai?month=${filterMonth}&year=${filterYear}`, 
+        `${import.meta.env.VITE_API_URL}/api/transactions/analyze-ai?month=${filterMonth}&year=${filterYear}`, 
         config
       );
       setAiAdvice(res.data.advice);

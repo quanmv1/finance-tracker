@@ -4,9 +4,25 @@ const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://127.0.0.1:5173'
+];
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: function (origin, callback) {
+    // Cho phép các request không có origin (như Postman hoặc các công cụ test)
+    if (!origin) return callback(null, true);
+    
+    // Nếu origin nằm trong danh sách allowedOrigins hoặc là một subdomain của vercel.app
+    if (allowedOrigins.indexOf(origin) !== -1 || origin.includes('vercel.app')) {
+      return callback(null, true);
+    } else {
+      return callback(new Error('Chặn bởi cấu hình bảo mật CORS'));
+    }
+  },
+  credentials: true
+}));
 app.use(express.json()); // Giúp Express đọc được dữ liệu JSON gửi lên
 
 // Kết nối MongoDB

@@ -9,3 +9,4 @@ frontend/dist/
 # Giấu mật khẩu database và chuỗi bí mật JWT
 .env
 backend/.env
+frontend/.env
