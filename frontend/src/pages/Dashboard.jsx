@@ -182,7 +182,7 @@ export default function Dashboard() {
         
         {/* THANH BỘ LỌC THỜI GIAN & NÚT MỞ MODAL THÊM GIAO DỊCH (Ý 2) */}
         <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center space-x-3 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center space-x-3 w-full sm:w-auto">
             <span className="text-sm font-bold text-gray-700 whitespace-nowrap">Báo cáo của:</span>
             <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="border border-gray-200 rounded-lg p-2 text-sm bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
               {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
@@ -244,7 +244,7 @@ export default function Dashboard() {
 
         {/* 🤖 KHU VỰC TRỢ LÝ TÀI CHÍNH THÔNG MINH AI */}
         <div className="bg-linear-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100 shadow-sm space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
+          <div className="flex items-center justify-between flex-wrap gap-x-2 gap-y-3">
             <div className="flex items-center space-x-2">
               <div className="bg-purple-600 p-2 rounded-xl text-white animate-bounce">
                 {/* Biểu tượng lấp lánh công nghệ AI */}
