@@ -27,7 +27,7 @@ export default function Dashboard() {
   const [category, setCategory] = useState('Food');
   const [customCategory, setCustomCategory] = useState(''); // State mới lưu danh mục tự gõ
 
-  // --- CÁC TRẠNG THÁI CHO Ý 2, 3 & 5 ---
+  // ------------------------------------------
   const currentYear = new Date().getFullYear();
   const currentMonth = String(new Date().getMonth() + 1).padStart(2, '0');
   
@@ -38,6 +38,7 @@ export default function Dashboard() {
   // ------------------------------------------
   const [aiAdvice, setAiAdvice] = useState(''); // Lưu câu trả lời của AI
   const [isAiLoading, setIsAiLoading] = useState(false); // Quản lý hiệu ứng loading khi chờ AI phản hồi
+  const [isAiOpen, setIsAiOpen] = useState(false);
   
   const config = {
     headers: { Authorization: `Bearer ${token}` }
@@ -135,6 +136,7 @@ export default function Dashboard() {
         config
       );
       setAiAdvice(res.data.advice);
+      setIsAiOpen(true);
     } catch (err) {
       console.error('Lỗi AI:', err);
       setAiAdvice('Không thể kết nối với trí tuệ nhân tạo lúc này. Vui lòng thử lại sau!');
@@ -166,12 +168,12 @@ export default function Dashboard() {
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-2">
               <div className="bg-emerald-500 p-2 rounded-xl text-white"><Wallet size={20} /></div>
-              <span className="font-bold text-xl text-gray-900">FinanceTracker</span>
+              <span className="font-bold text-lg sm:text-xl text-gray-900">FinanceTracker</span>
             </div>
-            <div className="flex items-center space-x-4">
-              <span className="text-sm font-medium text-gray-600">Xin chào, {user?.username}</span>
-              <button onClick={logout} className="flex items-center space-x-1 text-sm font-semibold text-red-600 hover:text-red-500 transition-colors">
-                <LogOut size={16} /> <span>Đăng xuất</span>
+            <div className="flex items-center gap-x-4 sm:gap-x-6 pl-2">
+              <span className="text-xs sm:text-sm font-medium text-gray-600 truncate max-w-30 sm:max-w-none">Xin chào, {user?.username}</span>
+              <button onClick={logout} className="flex items-center space-x-1 text-xs sm:text-sm font-semibold text-red-600 hover:text-red-500 transition-colors shrink-0">
+                <LogOut size={14} className="sm:size-4"/> <span>Đăng xuất</span>
               </button>
             </div>
           </div>
@@ -243,22 +245,40 @@ export default function Dashboard() {
         </div>
 
         {/* 🤖 KHU VỰC TRỢ LÝ TÀI CHÍNH THÔNG MINH AI */}
-        <div className="bg-linear-to-r from-purple-50 to-indigo-50 p-6 rounded-2xl border border-purple-100 shadow-sm space-y-4">
+        <div 
+          onClick={() => aiAdvice && setIsAiOpen(!isAiOpen)} // Click vào vùng bao bọc để đóng/mở khi đã có kết quả
+          className={`p-6 rounded-2xl border shadow-sm space-y-4 transition-all duration-300 ${
+            aiAdvice ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
+          } ${
+            isAiOpen ? 'bg-linear-to-r from-purple-50 to-indigo-50 border-purple-200' : 'bg-white border-gray-100'
+          }`}
+        >
           <div className="flex items-center justify-between flex-wrap gap-x-2 gap-y-3">
             <div className="flex items-center space-x-2">
-              <div className="bg-purple-600 p-2 rounded-xl text-white animate-bounce">
-                {/* Biểu tượng lấp lánh công nghệ AI */}
+              {/* Icon tự động xoay khi AI đang load, hết load sẽ bounce nhẹ */}
+              <div className={`p-2 rounded-xl text-white transition-all ${isAiLoading ? 'bg-purple-400 animate-spin' : 'bg-purple-600 animate-bounce'}`}>
                 <PlusCircle size={20} /> 
               </div>
               <div>
-                <h4 className="font-extrabold text-lg text-purple-900">Trợ lý Phân tích Tài chính AI</h4>
+                <h4 className="font-extrabold text-sm sm:text-lg text-purple-900 flex items-center flex-wrap gap-2">
+                  <span>Trợ lý Phân tích Tài chính AI</span>
+                  {/* Nhãn trạng thái hỗ trợ UX */}
+                  {aiAdvice && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all ${isAiOpen ? 'bg-purple-200 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
+                      {isAiOpen ? 'Click để thu gọn ↩' : 'Có lời khuyên! Click để xem 👁️'}
+                    </span>
+                  )}
+                </h4>
                 <p className="text-xs text-purple-600">Đưa ra lời khuyên chi tiêu thông minh dựa trên dữ liệu tháng {filterMonth}</p>
               </div>
             </div>
             
             {/* NÚT KÍCH HOẠT QUÉT AI */}
             <button
-              onClick={handleGetAiAdvice}
+              onClick={(e) => {
+                e.stopPropagation(); 
+                handleGetAiAdvice();
+              }}
               disabled={isAiLoading}
               className="bg-purple-600 hover:bg-purple-700 disabled:bg-purple-400 text-white text-xs font-bold px-4 py-2.5 rounded-xl transition-colors shadow-sm flex items-center space-x-1"
             >
@@ -277,9 +297,12 @@ export default function Dashboard() {
           </div>
 
           {/* KẾT QUẢ AI PHẢN HỒI */}
-          {aiAdvice && (
-            <div className="bg-white/80 border border-purple-100 rounded-xl p-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line shadow-inner">
-              {aiAdvice}
+          {aiAdvice && isAiOpen && (
+            <div 
+              onClick={(e) => e.stopPropagation()} 
+              className="bg-white/90 border border-purple-100 rounded-xl p-4 text-xs sm:text-sm text-gray-700 leading-relaxed shadow-inner font-medium text-justify select-text whitespace-pre-line animate-slide-down"
+            >
+              {aiAdvice} 
             </div>
           )}
         </div>
@@ -296,45 +319,77 @@ export default function Dashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+            <table className="w-full text-left border-collapse min-w-[600px]"> {/* Thêm min-w để ép bảng có độ rộng tối thiểu khi cuộn, tránh co rúm chữ */}
               <thead>
-                <tr className="bg-gray-50 text-gray-400 text-xs font-semibold uppercase border-b border-gray-100">
-                  <th className="p-4 w-12 text-center">
+                <tr className="bg-gray-50 text-gray-400 text-[10px] sm:text-xs font-semibold uppercase border-b border-gray-100">
+                  {/* Ô CHECKBOX CHỌN TẤT CẢ */}
+                  <th className="p-3 sm:p-4 w-12 text-center">
                     <button type="button" onClick={handleSelectAll} className="text-gray-500 hover:text-gray-700">
-                      {selectedIds.length === transactions.length && transactions.length > 0 ? <CheckSquare size={18} className="text-emerald-600" /> : <Square size={18} />}
+                      {selectedIds.length === transactions.length && transactions.length > 0 ? (
+                        <CheckSquare size={16} className="text-emerald-600 sm:size-[18px]" />
+                      ) : (
+                        <Square size={16} className="sm:size-[18px]" />
+                      )}
                     </button>
                   </th>
-                  <th className="p-4">Nội dung</th>
-                  <th className="p-4">Danh mục</th>
-                  <th className="p-4 flex items-center space-x-1"><Clock size={14} /><span>Thời gian tạo</span></th>
-                  <th className="p-4 text-right">Số tiền</th>
-                  <th className="p-4 text-center">Thao tác</th>
+                  <th className="p-3 sm:p-4">Nội dung</th>
+                  <th className="p-3 sm:p-4">Danh mục</th>
+                  <th className="p-3 sm:p-4">
+                    <span className="flex items-center space-x-1">
+                      <Clock size={12} className="sm:size-[14px]" />
+                      <span>Thời gian tạo</span>
+                    </span>
+                  </th>
+                  <th className="p-3 sm:p-4 text-right">Số tiền</th>
+                  <th className="p-3 sm:p-4 text-center">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-sm">
+              <tbody className="divide-y divide-gray-100 text-xs sm:text-sm"> {/* Hạ từ text-sm xuống text-xs trên mobile để chữ gọn gàng */}
                 {transactions.length > 0 ? (
                   transactions.map((t) => (
                     <tr key={t._id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(t._id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''}`}>
-                      <td className="p-4 text-center">
+                      {/* CỘT CHECKBOX */}
+                      <td className="p-3 sm:p-4 text-center">
                         <button type="button" onClick={() => handleSelectId(t._id)} className="text-gray-400 hover:text-gray-600">
-                          {selectedIds.includes(t._id) ? <CheckSquare size={18} className="text-emerald-600" /> : <Square size={18} />}
+                          {selectedIds.includes(t._id) ? (
+                            <CheckSquare size={16} className="text-emerald-600 sm:size-[18px]" />
+                          ) : (
+                            <Square size={16} className="sm:size-[18px]" />
+                          )}
                         </button>
                       </td>
-                      <td className="p-4 font-semibold text-gray-900">{t.title}</td>
-                      <td className="p-4"><span className="px-2 py-1 bg-gray-100 rounded-full text-xs text-gray-600 font-medium">{categoryLabels[t.category] || t.category}</span></td>
-                      <td className="p-4 text-gray-500">
+                      {/* NỘI DUNG GIAO DỊCH */}
+                      <td className="p-3 sm:p-4 font-semibold text-gray-900 break-words max-w-[150px] sm:max-w-none">
+                        {t.title}
+                      </td>
+                      {/* DANH MỤC */}
+                      <td className="p-3 sm:p-4">
+                        <span className="px-2 py-0.5 sm:py-1 bg-gray-100 rounded-full text-[10px] sm:text-xs text-gray-600 font-medium whitespace-nowrap">
+                          {categoryLabels[t.category] || t.category}
+                        </span>
+                      </td>
+                      {/* THỜI GIAN */}
+                      <td className="p-3 sm:p-4 text-gray-500 whitespace-nowrap">
                         {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(t.createdAt).toLocaleDateString('vi-VN')}
                       </td>
-                      <td className={`p-4 font-bold text-right ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
+                      {/* SỐ TIỀN */}
+                      <td className={`p-3 sm:p-4 font-bold text-right whitespace-nowrap ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
                         {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()} đ
                       </td>
-                      <td className="p-4 text-center">
-                        <button onClick={() => handleDeleteOne(t._id)} className="text-gray-400 hover:text-red-600 p-1 rounded-md transition-colors"><Trash2 size={16} /></button>
+                      {/* THAO TÁC XÓA */}
+                      <td className="p-3 sm:p-4 text-center">
+                        <button onClick={() => handleDeleteOne(t._id)} className="text-gray-400 hover:text-red-600 p-1 rounded-md transition-colors">
+                          <Trash2 size={14} className="sm:size-[16px]" />
+                        </button>
                       </td>
                     </tr>
                   ))
                 ) : (
-                  <tr><td colSpan="6" className="p-8 text-center text-gray-400 text-sm font-medium">Không tìm thấy dữ liệu giao dịch trong tháng này.</td></tr>
+                  <tr>
+                    <td colSpan="6" className="p-8 text-center text-gray-400 text-xs sm:text-sm font-medium">
+                      Không tìm thấy dữ liệu giao dịch trong tháng này.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>

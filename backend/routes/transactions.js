@@ -206,8 +206,8 @@ router.get('/analyze-ai', async (req, res) => {
       Yêu cầu đầu ra:
       1. Đánh giá ngắn gọn xem người dùng tiêu hoang hay tiết kiệm.
       2. Chỉ ra danh mục nào đang tiêu tốn nhiều tiền nhất một cách bất thường (nếu có).
-      3. Đưa ra 2-3 gợi ý hành động thực tế để họ tối ưu hóa ngân sách tốt hơn trong tháng sau.
-      Hãy viết câu trả lời thật thân thiện, định dạng rõ ràng (có thể dùng gạch đầu dòng), không dài dòng quá 150 từ.
+      3. Đưa ra các gợi ý hành động thực tế (đánh số hoặc gạch đầu dòng các mục nhỏ và xuống dòng rõ ràng cho từng mục) để họ tối ưu hóa ngân sách tốt hơn trong tháng sau.
+      Hãy viết câu trả lời thật thân thiện, định dạng rõ ràng, tuyệt đối không sử dụng ký tự dấu sao kép (**). Không viết dài dòng quá 150 từ.
     `;
 
     // 3. Khởi tạo mô hình Gemini và gửi dữ liệu đi
