@@ -319,16 +319,16 @@ export default function Dashboard() {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[600px]"> {/* Thêm min-w để ép bảng có độ rộng tối thiểu khi cuộn, tránh co rúm chữ */}
+            <table className="w-full text-left border-collapse min-w-150"> {/* Thêm min-w để ép bảng có độ rộng tối thiểu khi cuộn, tránh co rúm chữ */}
               <thead>
                 <tr className="bg-gray-50 text-gray-400 text-[10px] sm:text-xs font-semibold uppercase border-b border-gray-100">
                   {/* Ô CHECKBOX CHỌN TẤT CẢ */}
                   <th className="p-3 sm:p-4 w-12 text-center">
                     <button type="button" onClick={handleSelectAll} className="text-gray-500 hover:text-gray-700">
                       {selectedIds.length === transactions.length && transactions.length > 0 ? (
-                        <CheckSquare size={16} className="text-emerald-600 sm:size-[18px]" />
+                        <CheckSquare size={16} className="text-emerald-600 sm:size-4.5" />
                       ) : (
-                        <Square size={16} className="sm:size-[18px]" />
+                        <Square size={16} className="sm:size-4.5" />
                       )}
                     </button>
                   </th>
@@ -336,7 +336,7 @@ export default function Dashboard() {
                   <th className="p-3 sm:p-4">Danh mục</th>
                   <th className="p-3 sm:p-4">
                     <span className="flex items-center space-x-1">
-                      <Clock size={12} className="sm:size-[14px]" />
+                      <Clock size={12} className="sm:size-3.5" />
                       <span>Thời gian tạo</span>
                     </span>
                   </th>
@@ -352,14 +352,14 @@ export default function Dashboard() {
                       <td className="p-3 sm:p-4 text-center">
                         <button type="button" onClick={() => handleSelectId(t._id)} className="text-gray-400 hover:text-gray-600">
                           {selectedIds.includes(t._id) ? (
-                            <CheckSquare size={16} className="text-emerald-600 sm:size-[18px]" />
+                            <CheckSquare size={16} className="text-emerald-600 sm:size-4.5" />
                           ) : (
-                            <Square size={16} className="sm:size-[18px]" />
+                            <Square size={16} className="sm:size-4.5" />
                           )}
                         </button>
                       </td>
                       {/* NỘI DUNG GIAO DỊCH */}
-                      <td className="p-3 sm:p-4 font-semibold text-gray-900 break-words max-w-[150px] sm:max-w-none">
+                      <td className="p-3 sm:p-4 font-semibold text-gray-900 wrap-break-word max-w-37.5 sm:max-w-none">
                         {t.title}
                       </td>
                       {/* DANH MỤC */}
@@ -379,7 +379,7 @@ export default function Dashboard() {
                       {/* THAO TÁC XÓA */}
                       <td className="p-3 sm:p-4 text-center">
                         <button onClick={() => handleDeleteOne(t._id)} className="text-gray-400 hover:text-red-600 p-1 rounded-md transition-colors">
-                          <Trash2 size={14} className="sm:size-[16px]" />
+                          <Trash2 size={14} className="sm:size-4" />
                         </button>
                       </td>
                     </tr>
