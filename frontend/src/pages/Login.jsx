@@ -21,6 +21,7 @@ export default function Login() {
       if (!window.google || !window.google.accounts) {
         // Nếu sau 800ms mà window.google vẫn trống rỗng -> Khẳng định 100% đã bị AdBlock chặn đứng
         setIsAdBlockError(true);
+        setError('Hệ thống phát hiện tiện ích chặn quảng cáo (AdBlock) đang chặn tính năng của Google.')
       } else {
         setIsAdBlockError(false);
       }
@@ -28,7 +29,7 @@ export default function Login() {
 
     return () => clearTimeout(checkTimer); // Dọn dẹp bộ đếm khi rời trang
   }, []);
-  
+
   // 2. Hàm xử lý khi nhấn nút Đăng nhập
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -77,7 +78,15 @@ export default function Login() {
   // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
   const handleGoogleClickWithCheck = () => {
     setError('');
-    handleGoogleSuccess(); // Gọi thẳng hàm mở popup của thư viện
+    setIsAdBlockError(false);
+
+    // Kiểm tra trực tiếp, nếu vẫn bị AdBlock chặn thì chặn đứng luôn hành động mở popup
+    if (!window.google || !window.google.accounts) {
+      setIsAdBlockError(true);
+      setError('Không thể đăng nhập. Vui lòng tắt AdBlock trên trình duyệt của bạn để tiếp tục!');
+      return; // Dừng lại tại đây
+    }
+    handleGoogleSuccess();
   };
 
   return (
