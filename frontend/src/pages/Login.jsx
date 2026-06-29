@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react';
+import { useState, useContext, useEffect, useRef} from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Lock, User, Eye, EyeOff } from 'lucide-react'; // Thêm icon Eye để làm ẩn/hiện ẩn/hiện mật khẩu
 import axios from 'axios';
@@ -11,7 +11,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false); // true: hiện chữ, false: ẩn dạng chấm ••
   const [error, setError] = useState('');
-
+  const [isAdBlockError, setIsAdBlockError] = useState(false); // Mặc định là false (ẩn thông báo)
   const { login } = useContext(AuthContext); // Lấy hàm kích hoạt đăng nhập từ Context
 
   // 2. Hàm xử lý khi nhấn nút Đăng nhập
@@ -36,15 +36,16 @@ export default function Login() {
     }
   };
 
-  // Khai báo một biến tạm để giữ bộ đếm thời gian kiểm tra Adblock
-  let adblockCheckTimeout;
-
+  // 3. Xử lý đăng nhập bằng Google với AdBlock check
+  const adblockTimeoutRef = useRef(null);
   const handleGoogleSuccess = useGoogleLogin({
     flow: 'auth-code', 
     onSuccess: async (tokenResponse) => {
-      // Thành công -> Xóa bộ đếm thời gian kiểm tra Adblock ngay lập tức
-      clearTimeout(adblockCheckTimeout);
+      // Đăng nhập thành công -> Xóa bộ đếm ngầm ngay lập tức và ẩn thông báo lỗi
+      if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
+      setIsAdBlockError(false); 
       setError('');
+      
       try {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
           code: tokenResponse.code
@@ -58,25 +59,37 @@ export default function Login() {
       }
     },
     onError: () => {
-      // Xóa bộ đếm thời gian nếu Google tự ném lỗi công khai
-      clearTimeout(adblockCheckTimeout);
+      // Google ném lỗi công khai (ví dụ người dùng chủ động tắt popup) -> Xóa bộ đếm và ẩn AdBlock lỗi
+      if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
+      setIsAdBlockError(false);
       setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
     }
   });
 
-  // Kích hoạt gọi popup đồng thời kích hoạt bộ đếm bắt lỗi Adblock ngầm
+  // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
   const handleGoogleClickWithCheck = () => {
     setError('');
+    setIsAdBlockError(false); // Reset lại trạng thái lỗi về false khi bắt đầu bấm
     
-    // 1. Kích hoạt mở popup của thư viện
+    // Nếu có bộ đếm cũ đang chạy (bấm liên tiếp), xóa nó đi trước
+    if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
+
+    // Kích hoạt mở cửa sổ popup của Google
     handleGoogleSuccess();
 
-    // 2. Chạy bộ đếm ngầm 1.5 giây. Nếu sau 1.5 giây hàm onSuccess không chạy để xóa bộ đếm này,
-    // chứng tỏ popup đã bị Adblock chặn đứng hoàn toàn làm đứng hình tiến trình.
-    adblockCheckTimeout = setTimeout(() => {
-      setError('Không thể mở cửa sổ đăng nhập Google. Vui lòng kiểm tra và tạm thời tắt các tiện ích chặn quảng cáo (Adblock) nếu có!');
+    // Chạy bộ đếm ngầm 2.5 giây. Nếu sau 2.5 giây không có onSuccess/onError nào xóa nó,
+    // chứng tỏ AdBlock đã chặn đứng tiến trình làm popup đóng băng.
+    adblockTimeoutRef.current = setTimeout(() => {
+      setIsAdBlockError(true); // Bật thông báo AdBlock màu vàng lên
     }, 2500); 
   };
+
+  // Xóa bộ đếm nếu người dùng rời khỏi trang khi đang chờ
+  useEffect(() => {
+    return () => {
+      if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
+    };
+  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
