@@ -77,14 +77,10 @@ export default function Login() {
 
   // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
   const handleGoogleClickWithCheck = () => {
-    setError('');
-    setIsAdBlockError(false);
-
-    // Kiểm tra trực tiếp, nếu vẫn bị AdBlock chặn thì chặn đứng luôn hành động mở popup
+    // Nếu quét trực tiếp thấy vẫn có AdBlock -> Giữ nguyên trạng thái lỗi, chặn không cho mở popup lỗi ngầm
     if (!window.google || !window.google.accounts) {
       setIsAdBlockError(true);
-      setError('Không thể đăng nhập. Vui lòng tắt AdBlock trên trình duyệt của bạn để tiếp tục!');
-      return; // Dừng lại tại đây
+      return;
     }
     handleGoogleSuccess();
   };
@@ -104,9 +100,12 @@ export default function Login() {
         <div className="bg-white py-8 px-4 shadow sm:rounded-xl sm:px-10 border border-gray-100 space-y-4">
           
           {/* Ô báo lỗi màu đỏ nếu thông tin sai */}
-          {error && (
-            <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-medium border border-red-100">
-              {error}
+          {(error || isAdBlockError) && (
+            <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center font-medium animate-fade-in">
+              {isAdBlockError 
+                ? 'Hệ thống phát hiện tiện ích chặn quảng cáo (AdBlock) đang chặn tính năng của Google.' 
+                : error
+              }
             </div>
           )}
 
