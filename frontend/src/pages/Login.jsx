@@ -69,63 +69,14 @@ export default function Login() {
   const handleGoogleClickWithCheck = () => {
     setError('');
     setIsAdBlockError(false);
+    
+    // Nếu có bộ đếm cũ của lần bấm trước đang chạy, xóa đi để tính lại từ đầu
+    if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
+    handleGoogleSuccess();
 
-    // 1. Cấu hình đường link gọi đến cửa sổ đăng nhập OAuth2 của Google
-    const rootUrl = 'https://accounts.google.com/o/oauth2/v2/auth';
-    const options = {
-      redirect_uri: window.location.origin, // Trả kết quả về chính trang login này
-      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID || '732641775791-766b44aql3beeh0ep975ub9oicm2l21v.apps.googleusercontent.com', // Thay bằng Client ID thật của bạn
-      access_type: 'offline',
-      response_type: 'code',
-      prompt: 'consent',
-      scope: [
-        'https://www.googleapis.com/auth/userinfo.profile',
-        'https://www.googleapis.com/auth/userinfo.email',
-      ].join(' '),
-    };
-
-    const qs = new URLSearchParams(options).toString();
-    const googleAuthUrl = `${rootUrl}?${qs}`;
-
-    // 2. Tiến hành ra lệnh mở cửa sổ Popup
-    const popup = window.open(googleAuthUrl, '_blank', 'width=500,height=600,left=200,top=100');
-
-    // 3. KIỂM TRA TUYỆT ĐỐI: Nếu trình duyệt chặn Pop-up (như trong ảnh của bạn)
-    // Biến 'popup' sẽ bị trống rỗng (null) hoặc bị trình duyệt ép đóng lập tức
-    if (!popup || popup.closed || typeof popup.closed === 'undefined') {
-      // Bật ngay lập tức cả chữ lỗi đỏ phía trên lẫn hộp màu vàng phía dưới!
+    popupTimeoutRef.current = setTimeout(() => {
       setIsAdBlockError(true);
-    } else {
-      // Nếu mở thành công, ẩn thông báo lỗi đi và chờ xử lý nhận diện token kết quả
-      setIsAdBlockError(false);
-      
-      // Lắng nghe xem khi nào người dùng chọn tài khoản xong để lấy "code" xử lý kết nối Backend
-      const checkPopupInterval = setInterval(async () => {
-        try {
-          if (!popup || popup.closed) {
-            clearInterval(checkPopupInterval);
-            return;
-          }
-
-          // Đọc URL của popup xem Google đã trả code về chưa
-          const currentUrl = popup.location.href;
-          if (currentUrl.includes('code=')) {
-            clearInterval(checkPopupInterval);
-            const urlParams = new URLSearchParams(popup.location.search);
-            const code = urlParams.get('code');
-            popup.close(); // Đóng popup lại
-
-            // Gửi mã code lên Backend xử lý Đăng nhập y hệt như cũ
-            const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, { code });
-            if (response.data.success) {
-              login(response.data.user, response.data.token);
-            }
-          }
-        } catch (searchError) {
-          // Bỏ qua lỗi CORS khi popup đang ở domain của Google
-        }
-      }, 500);
-    }
+    }, 2000);
   };
 
   return (
