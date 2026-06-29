@@ -37,15 +37,11 @@ export default function Login() {
   };
 
   // 3. Xử lý đăng nhập bằng Google với AdBlock check
-  const adblockTimeoutRef = useRef(null);
   const handleGoogleSuccess = useGoogleLogin({
     flow: 'auth-code', 
     onSuccess: async (tokenResponse) => {
-      // Đăng nhập thành công -> Xóa bộ đếm ngầm ngay lập tức và ẩn thông báo lỗi
-      if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
-      setIsAdBlockError(false); 
       setError('');
-      
+      setIsAdBlockError(false);
       try {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
           code: tokenResponse.code
@@ -59,9 +55,6 @@ export default function Login() {
       }
     },
     onError: () => {
-      // Google ném lỗi công khai (ví dụ người dùng chủ động tắt popup) -> Xóa bộ đếm và ẩn AdBlock lỗi
-      if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
-      setIsAdBlockError(false);
       setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
     }
   });
@@ -69,27 +62,19 @@ export default function Login() {
   // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
   const handleGoogleClickWithCheck = () => {
     setError('');
-    setIsAdBlockError(false); // Reset lại trạng thái lỗi về false khi bắt đầu bấm
-    
-    // Nếu có bộ đếm cũ đang chạy (bấm liên tiếp), xóa nó đi trước
-    if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
+    setIsAdBlockError(false);
 
-    // Kích hoạt mở cửa sổ popup của Google
+    // Kiểm tra xem đối tượng google có tồn tại trong hệ thống cửa sổ window không
+    // Nếu biến window.google hoặc window.google.accounts không tồn tại -> Chắc chắn bị AdBlock chặn script tải về
+    if (!window.google || !window.google.accounts) {
+      setIsAdBlockError(true);
+      setError('Tiện ích chặn quảng cáo (AdBlock) đang ngăn chặn tính năng này.');
+      return; // Chặn đứng luôn, không cho chạy tiếp các hàm lỗi phía sau
+    }
+
+    // Nếu hệ thống sạch sẽ (không có AdBlock), kích hoạt mở popup như bình thường
     handleGoogleSuccess();
-
-    // Chạy bộ đếm ngầm 2.5 giây. Nếu sau 2.5 giây không có onSuccess/onError nào xóa nó,
-    // chứng tỏ AdBlock đã chặn đứng tiến trình làm popup đóng băng.
-    adblockTimeoutRef.current = setTimeout(() => {
-      setIsAdBlockError(true); // Bật thông báo AdBlock màu vàng lên
-    }, 2500); 
   };
-
-  // Xóa bộ đếm nếu người dùng rời khỏi trang khi đang chờ
-  useEffect(() => {
-    return () => {
-      if (adblockTimeoutRef.current) clearTimeout(adblockTimeoutRef.current);
-    };
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
