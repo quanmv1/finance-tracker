@@ -18,6 +18,8 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+    setIsAdBlockError(false);
+    if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
 
     try {
       // Gửi request lên API mới của Backend (Chấp nhận cả email/username qua trường credential)
@@ -96,9 +98,9 @@ export default function Login() {
           {/* Ô báo lỗi màu đỏ nếu thông tin sai */}
           {(error || isAdBlockError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center font-medium animate-fade-in">
-              {isAdBlockError 
-                ? 'Hệ thống phát hiện tiện ích chặn quảng cáo (AdBlock) đang chặn tính năng của Google.' 
-                : error
+              {error 
+                ? error
+                : 'Hệ thống phát hiện tiện ích chặn quảng cáo (AdBlock) đang chặn tính năng của Google.'
               }
             </div>
           )}
