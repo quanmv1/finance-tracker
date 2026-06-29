@@ -13,23 +13,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [isAdBlockError, setIsAdBlockError] = useState(false); // Mặc định là false (ẩn thông báo)
   const { login } = useContext(AuthContext); // Lấy hàm kích hoạt đăng nhập từ Context
-
-  // Tự động kiểm tra ngầm xem Script của Google có bị AdBlock chặn không ngay khi vào trang Login
-  useEffect(() => {
-    // Đợi 1 khoảng thời gian rất ngắn (khoảng 800ms) để các script bất đồng bộ kịp tải hoàn tất
-    const checkTimer = setTimeout(() => {
-      if (!window.google || !window.google.accounts) {
-        // Nếu sau 800ms mà window.google vẫn trống rỗng -> Khẳng định 100% đã bị AdBlock chặn đứng
-        setIsAdBlockError(true);
-        setError('Hệ thống phát hiện tiện ích chặn quảng cáo (AdBlock) đang chặn tính năng của Google.')
-      } else {
-        setIsAdBlockError(false);
-      }
-    }, 800);
-
-    return () => clearTimeout(checkTimer); // Dọn dẹp bộ đếm khi rời trang
-  }, []);
-
+  
   // 2. Hàm xử lý khi nhấn nút Đăng nhập
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,16 +37,19 @@ export default function Login() {
   };
 
   // 3. Hàm xử lý đăng nhập bằng Google 
+  const popupTimeoutRef = useRef(null);
   const handleGoogleSuccess = useGoogleLogin({
     flow: 'auth-code', 
     onSuccess: async (tokenResponse) => {
-      setError('');
+      // 💡 Cửa sổ mở thành công và đăng nhập được -> XÓA HẸN GIỜ LẬP TỨC!
+      if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
       setIsAdBlockError(false);
+      setError('');
+      
       try {
         const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
           code: tokenResponse.code
         });
-
         if (response.data.success) {
           login(response.data.user, response.data.token);
         }
@@ -71,18 +58,25 @@ export default function Login() {
       }
     },
     onError: () => {
+      // Người dùng chủ động tắt cửa sổ popup -> Cũng xóa hẹn giờ đi
+      if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
+      setIsAdBlockError(false);
       setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
     }
   });
 
   // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
   const handleGoogleClickWithCheck = () => {
-    // Nếu quét trực tiếp thấy vẫn có AdBlock -> Giữ nguyên trạng thái lỗi, chặn không cho mở popup lỗi ngầm
-    if (!window.google || !window.google.accounts) {
-      setIsAdBlockError(true);
-      return;
-    }
+    setError('');
+    setIsAdBlockError(false);
+    
+    // Nếu có bộ đếm cũ của lần bấm trước đang chạy, xóa đi để tính lại từ đầu
+    if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
     handleGoogleSuccess();
+
+    popupTimeoutRef.current = setTimeout(() => {
+      setIsAdBlockError(true);
+    }, 2000);
   };
 
   return (
