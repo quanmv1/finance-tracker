@@ -1,4 +1,4 @@
-import { useState, useContext, useEffect, useRef} from 'react';
+import { useState, useContext, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Wallet, Lock, User, Eye, EyeOff } from 'lucide-react'; // Thêm icon Eye để làm ẩn/hiện ẩn/hiện mật khẩu
 import axios from 'axios';
@@ -19,7 +19,6 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setIsAdBlockError(false);
-    if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
 
     try {
       // Gửi request lên API mới của Backend (Chấp nhận cả email/username qua trường credential)
@@ -39,12 +38,9 @@ export default function Login() {
   };
 
   // 3. Hàm xử lý đăng nhập bằng Google 
-  const popupTimeoutRef = useRef(null);
   const handleGoogleSuccess = useGoogleLogin({
     flow: 'auth-code', 
     onSuccess: async (tokenResponse) => {
-      // 💡 Cửa sổ mở thành công và đăng nhập được -> XÓA HẸN GIỜ LẬP TỨC!
-      if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
       setIsAdBlockError(false);
       setError('');
       
@@ -60,25 +56,16 @@ export default function Login() {
       }
     },
     onError: () => {
-      // Người dùng chủ động tắt cửa sổ popup -> Cũng xóa hẹn giờ đi
-      if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
-      setIsAdBlockError(false);
-      setError('Đăng nhập bằng Google thất bại hoặc bị hủy.');
+      setIsAdBlockError(true);
+      setError('');
     }
   });
 
-  // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
+  // Hàm kích hoạt nút bấm
   const handleGoogleClickWithCheck = () => {
     setError('');
     setIsAdBlockError(false);
-    
-    // Nếu có bộ đếm cũ của lần bấm trước đang chạy, xóa đi để tính lại từ đầu
-    if (popupTimeoutRef.current) clearTimeout(popupTimeoutRef.current);
     handleGoogleSuccess();
-
-    popupTimeoutRef.current = setTimeout(() => {
-      setIsAdBlockError(true);
-    }, 2000);
   };
 
   return (
