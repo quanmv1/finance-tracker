@@ -192,8 +192,8 @@ export default function Dashboard() {
               ))}
             </select>
             <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="border border-gray-200 rounded-lg p-2 text-sm bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
-              {[currentYear, currentYear - 1, currentYear - 2].map(y => (
-                <option key={y} value={y}>Năm {y}</option>
+              {Array.from({ length: new Date().getFullYear() - 2026 + 1 }, (_, index) => 2026 + index).map(y => (
+                <option key={y} value={String(y)}>Năm {y}</option>
               ))}
             </select>
           </div>
