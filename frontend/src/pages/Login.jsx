@@ -14,6 +14,21 @@ export default function Login() {
   const [isAdBlockError, setIsAdBlockError] = useState(false); // Mặc định là false (ẩn thông báo)
   const { login } = useContext(AuthContext); // Lấy hàm kích hoạt đăng nhập từ Context
 
+  // Tự động kiểm tra ngầm xem Script của Google có bị AdBlock chặn không ngay khi vào trang Login
+  useEffect(() => {
+    // Đợi 1 khoảng thời gian rất ngắn (khoảng 800ms) để các script bất đồng bộ kịp tải hoàn tất
+    const checkTimer = setTimeout(() => {
+      if (!window.google || !window.google.accounts) {
+        // Nếu sau 800ms mà window.google vẫn trống rỗng -> Khẳng định 100% đã bị AdBlock chặn đứng
+        setIsAdBlockError(true);
+      } else {
+        setIsAdBlockError(false);
+      }
+    }, 800);
+
+    return () => clearTimeout(checkTimer); // Dọn dẹp bộ đếm khi rời trang
+  }, []);
+  
   // 2. Hàm xử lý khi nhấn nút Đăng nhập
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -36,7 +51,7 @@ export default function Login() {
     }
   };
 
-  // 3. Xử lý đăng nhập bằng Google với AdBlock check
+  // 3. Hàm xử lý đăng nhập bằng Google 
   const handleGoogleSuccess = useGoogleLogin({
     flow: 'auth-code', 
     onSuccess: async (tokenResponse) => {
@@ -62,18 +77,7 @@ export default function Login() {
   // Hàm kích hoạt nút bấm và bật bộ đếm bắt lỗi AdBlock ngầm
   const handleGoogleClickWithCheck = () => {
     setError('');
-    setIsAdBlockError(false);
-
-    // Kiểm tra xem đối tượng google có tồn tại trong hệ thống cửa sổ window không
-    // Nếu biến window.google hoặc window.google.accounts không tồn tại -> Chắc chắn bị AdBlock chặn script tải về
-    if (!window.google || !window.google.accounts) {
-      setIsAdBlockError(true);
-      setError('Tiện ích chặn quảng cáo (AdBlock) đang ngăn chặn tính năng này.');
-      return; // Chặn đứng luôn, không cho chạy tiếp các hàm lỗi phía sau
-    }
-
-    // Nếu hệ thống sạch sẽ (không có AdBlock), kích hoạt mở popup như bình thường
-    handleGoogleSuccess();
+    handleGoogleSuccess(); // Gọi thẳng hàm mở popup của thư viện
   };
 
   return (
