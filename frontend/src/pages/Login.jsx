@@ -4,6 +4,8 @@ import { Wallet, Lock, User, Eye, EyeOff } from 'lucide-react'; // Thêm icon Ey
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google';
+import { validateCredential, validateLoginPassword } from '../utils/validationUtils';
+import authBg from '/auth-bg.png';
 
 export default function Login() {
   // 1. Khai báo các State quản lý dữ liệu nhập vào và trạng thái ẩn/hiện
@@ -19,6 +21,20 @@ export default function Login() {
     e.preventDefault();
     setError('');
     setIsAdBlockError(false);
+
+    // Validation credential
+    const credentialError = validateCredential(credential);
+    if (credentialError) {
+      setError(credentialError);
+      return;
+    }
+
+    // Validation password
+    const passwordError = validateLoginPassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
 
     try {
       // Gửi request lên API mới của Backend (Chấp nhận cả email/username qua trường credential)
@@ -69,18 +85,26 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+    <div 
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
+      style={{ backgroundImage: `url(${authBg})` }}
+    >
+      {/* LỚP PHỦ OVERLAY: Làm tối và mờ nhẹ nền sau giúp Form màu trắng nổi bật, dễ đọc chữ */}
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[3px] z-0"></div>
+      
+      {/* Phần Tiêu đề / Logo (Thêm z-10 để nổi lên trên lớp overlay) */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
         <div className="flex justify-center">
           <div className="bg-emerald-500 p-3 rounded-2xl shadow-md text-white">
             <Wallet size={36} />
           </div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">Chào mừng quay trở lại</h2>
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white drop-shadow-md">Welcome to Finance Tracker</h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-xl sm:px-10 border border-gray-100 space-y-4">
+      {/* Phần Khung Form (Thêm z-10 để nổi lên trên lớp overlay) */}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="bg-white/95 backdrop-blur-sm py-8 px-4 shadow-2xl rounded-xl sm:px-10 border border-white/20 space-y-4">
           
           {/* Ô báo lỗi màu đỏ nếu thông tin sai */}
           {(error || isAdBlockError) && (

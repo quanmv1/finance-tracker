@@ -210,6 +210,47 @@ export default function Dashboard() {
 
         {/* THẺ THỐNG KÊ */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Thẻ Số dư - Gradient Xanh Dương */}
+          <div className="bg-linear-to-br from-indigo-500 via-purple-500 to-blue-600 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-indigo-100 uppercase tracking-wider">Số dư trong tháng</p>
+              <h3 className="text-2xl font-black mt-1 drop-shadow-sm">
+                {balance.toLocaleString()} đ
+              </h3>
+            </div>
+            <div className="p-3 bg-white/20 backdrop-blur-md text-white rounded-xl shadow-inner">
+              <Wallet size={24} />
+            </div>
+          </div>
+
+          {/* Thẻ Thu nhập - Gradient Xanh Lục */}
+          <div className="bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Thu nhập tháng này</p>
+              <h3 className="text-2xl font-black mt-1 drop-shadow-sm">
+                +{totalIncome.toLocaleString()} đ
+              </h3>
+            </div>
+            <div className="p-3 bg-white/20 backdrop-blur-md text-white rounded-xl shadow-inner">
+              <ArrowUpRight size={24} />
+            </div>
+          </div>
+
+          {/* Thẻ Chi tiêu - Gradient Đỏ Hồng */}
+          <div className="bg-linear-to-br from-rose-500 via-pink-500 to-red-600 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider">Chi tiêu tháng này</p>
+              <h3 className="text-2xl font-black mt-1 drop-shadow-sm">
+                -{totalExpense.toLocaleString()} đ
+              </h3>
+            </div>
+            <div className="p-3 bg-white/20 backdrop-blur-md text-white rounded-xl shadow-inner">
+              <ArrowDownRight size={24} />
+            </div>
+          </div>
+        </div>      
+        {/*
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
             <div><p className="text-sm font-medium text-gray-500">Số dư trong tháng</p><h3 className="text-2xl font-bold mt-1 text-gray-900">{balance.toLocaleString()} đ</h3></div>
             <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Wallet size={24} /></div>
@@ -223,7 +264,7 @@ export default function Dashboard() {
             <div className="p-3 bg-red-50 text-red-600 rounded-xl"><ArrowDownRight size={24} /></div>
           </div>
         </div>
-
+        */}
         {/* BIỂU ĐỒ TRÒN (CHIẾM TOÀN BỘ ĐỘ RỘNG MÀN HÌNH KHÔNG BỊ FORM CHE KHUẤT) */}
         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between w-full">
           <h4 className="font-bold text-lg text-gray-900">Phân tích chi tiêu theo danh mục</h4>
@@ -398,7 +439,7 @@ export default function Dashboard() {
       </main>
 
       {/* ========================================================== */}
-      {/* 📦 BƯỚC 2: TOÀN BỘ GIAO DIỆN MODAL POPUP THÊM GIAO DỊCH (Ý 2) */}
+      {/* 📦 TOÀN BỘ GIAO DIỆN MODAL POPUP THÊM GIAO DỊCH */}
       {/* ========================================================== */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
@@ -437,12 +478,12 @@ export default function Dashboard() {
                 <div>
                   <label className="block text-xs font-semibold text-gray-500 uppercase">Danh mục</label>
                   <select value={category} onChange={e => setCategory(e.target.value)} className="mt-1 w-full border border-gray-200 rounded-lg bg-gray-50 p-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500">
-                    <option value="Food">Ăn uống</option>
-                    <option value="Rent">Tiền nhà</option>
-                    <option value="Shopping">Mua sắm</option>
-                    <option value="Salary">Tiền lương</option>
-                    <option value="Bonus">Tiền thưởng</option>
-                    <option value="Other">Khác (Tự nhập)</option> {/* Option kích hoạt tính năng tự chọn (Ý 2.1) */}
+                    <option value="Food">🍔 Ăn uống</option>
+                    <option value="Rent">🏠 Tiền nhà</option>
+                    <option value="Shopping">🛍️ Mua sắm</option>
+                    <option value="Salary">💵 Tiền lương</option>
+                    <option value="Bonus">🎁 Tiền thưởng</option>
+                    <option value="Other">✨ Khác (Tự nhập)</option> {/* Option kích hoạt tính năng tự chọn (Ý 2.1) */}
                   </select>
                 </div>
               </div>

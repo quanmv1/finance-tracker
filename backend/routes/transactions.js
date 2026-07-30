@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Transaction = require('../models/Transaction');
 const { protect } = require('../middleware/authMiddleware'); // Gọi người gác cổng vào
+const { validateTransaction } = require('../middleware/validateRequest');
 const { GoogleGenerativeAI } = require('@google/generative-ai');
 // Đặt protect ở đây: TẤT CẢ các API bên dưới dòng này đều bắt buộc phải đăng nhập mới dùng được
 router.use(protect);
@@ -9,7 +10,7 @@ router.use(protect);
 // ==========================================
 // 1. API: THÊM MỚI GIAO DỊCH (Đã bảo mật)
 // ==========================================
-router.post('/', async (req, res) => {
+router.post('/', validateTransaction, async (req, res) => {
   try {
     const { title, amount, type, category, date, note } = req.body;
 
@@ -95,7 +96,7 @@ router.delete('/:id', async (req, res) => {
 // ==========================================
 // 4. API: CẬP NHẬT GIAO DỊCH (Chỉ cho phép sửa đồ của mình)
 // ==========================================
-router.put('/:id', async (req, res) => {
+router.put('/:id', validateTransaction, async (req, res) => {
   try {
     let transaction = await Transaction.findById(req.params.id);
 

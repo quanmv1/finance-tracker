@@ -9,11 +9,14 @@ const TransactionSchema = new mongoose.Schema({
   title: {
     type: String,
     required: [true, 'Vui lòng nhập tiêu đề giao dịch'],
-    trim: true
+    trim: true,
+    minlength: [2, 'Tiêu đề phải có ít nhất 2 ký tự'],
+    maxlength: [100, 'Tiêu đề không được vượt quá 100 ký tự']
   },
   amount: {
     type: Number,
-    required: [true, 'Vui lòng nhập số tiền']
+    required: [true, 'Vui lòng nhập số tiền'],
+    min: [0.01, 'Số tiền phải lớn hơn 0']
   },
   type: {
     type: String,
@@ -31,7 +34,8 @@ const TransactionSchema = new mongoose.Schema({
   },
   note: {
     type: String,
-    trim: true
+    trim: true,
+    maxlength: [500, 'Ghi chú không được vượt quá 500 ký tự']
   }
 }, { timestamps: true }); // Tự động thêm ngày tạo (createdAt) và ngày cập nhật (updatedAt)
 

@@ -2,6 +2,16 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Wallet, Lock, User, Mail, Eye, EyeOff, ShieldCheck } from 'lucide-react';
 import axios from 'axios';
+import {
+  validateUsername,
+  validateEmail,
+  validatePassword,
+  validateConfirmPassword,
+  validateOtp,
+  checkPasswordStrength,
+  getPasswordStrengthConfig
+} from '../utils/validationUtils';
+import authBg from '/auth-bg.png';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -20,36 +30,36 @@ export default function Register() {
 
   const navigate = useNavigate();
 
-  const checkPasswordStrength = (pwd) => {
-    let score = 0;
-    if (pwd.length >= 6) score++;
-    if (pwd.length >= 10) score++;
-    if (/[A-Z]/.test(pwd) && /[0-9]/.test(pwd)) score++;
-    if (/[^A-Za-z0-9]/.test(pwd)) score++;
-    return score;
-  };
-
   const currentStrength = checkPasswordStrength(password);
-
-  const getBarConfig = (score) => {
-    if (!password) return { width: '0%', color: 'bg-gray-200', text: '' };
-    switch (score) {
-      case 1: return { width: '25%', color: 'bg-red-500', text: 'Yếu 🔴' };
-      case 2: return { width: '50%', color: 'bg-orange-500', text: 'Trung bình ⚠️' };
-      case 3: return { width: '75%', color: 'bg-blue-500', text: 'Mạnh 💪' };
-      case 4: return { width: '100%', color: 'bg-emerald-500', text: 'Rất mạnh 🔥' };
-      default: return { width: '10%', color: 'bg-red-500', text: 'Quá yếu' };
-    }
-  };
-
-  const barConfig = getBarConfig(currentStrength);
+  const barConfig = getPasswordStrengthConfig(currentStrength);
 
   // Hàm xử lý Đăng ký ban đầu
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (password !== confirmPassword) {
-      setError('Mật khẩu nhập lại không khớp!');
+
+    // Validation từng field
+    const usernameError = validateUsername(username);
+    if (usernameError) {
+      setError(usernameError);
+      return;
+    }
+
+    const emailError = validateEmail(email);
+    if (emailError) {
+      setError(emailError);
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      setError(passwordError);
+      return;
+    }
+
+    const confirmPasswordError = validateConfirmPassword(password, confirmPassword);
+    if (confirmPasswordError) {
+      setError(confirmPasswordError);
       return;
     }
 
@@ -72,6 +82,14 @@ export default function Register() {
     e.preventDefault();
     setError('');
     setSuccessMessage('');
+
+    // Validation OTP
+    const otpError = validateOtp(otp);
+    if (otpError) {
+      setError(otpError);
+      return;
+    }
+
     try {
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/verify-otp`, {
         email,
@@ -89,18 +107,26 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
-      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center">
+    <div 
+      className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
+      style={{ backgroundImage: `url(${authBg})` }}
+    >
+      {/* LỚP PHỦ OVERLAY: Giúp làm chìm ảnh nền xuống */}
+      <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[3px] z-0"></div>
+
+      {/* Phần Tiêu đề (Thêm z-10) */}
+      <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
         <div className="flex justify-center">
           <div className="bg-emerald-500 p-3 rounded-2xl shadow-md text-white"><Wallet size={36} /></div>
         </div>
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <h2 className="mt-6 text-center text-3xl font-extrabold text-white drop-shadow-md">
           {isRegisterSuccess ? 'Xác thực Email của bạn' : 'Tạo tài khoản mới'}
         </h2>
       </div>
 
-      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-xl sm:px-10 border border-gray-100 space-y-4">
+      {/* Phần Khung Form (Thêm z-10) */}
+      <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
+        <div className="bg-white/95 backdrop-blur-sm py-8 px-4 shadow-2xl rounded-xl sm:px-10 border border-white/20 space-y-4">
           {error && <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm text-center font-medium">{error}</div>}
           {successMessage && <div className="bg-emerald-50 text-emerald-600 p-3 rounded-lg text-sm text-center font-medium">{successMessage}</div>}
 

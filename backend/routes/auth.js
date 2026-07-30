@@ -5,6 +5,7 @@ const jwt = require('jsonwebtoken');
 const nodemailer = require('nodemailer'); // Gọi thư viện gửi mail
 const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
+const { validateRegister, validateLogin, validateVerifyOtp } = require('../middleware/validateRequest');
 
 // Khởi tạo client hỗ trợ cả Client Secret để đổi mã code lấy thông tin user
 const client = new OAuth2Client(
@@ -23,7 +24,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP)
-router.post('/register', async (req, res) => {
+router.post('/register', validateRegister, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
@@ -80,9 +81,9 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// 2. API XÁC MINH MÃ OTP (MỚI BỔ SUNG)
+// 2. API XÁC MINH MÃ OTP 
 // Đường dẫn: POST /api/auth/verify-otp
-router.post('/verify-otp', async (req, res) => {
+router.post('/verify-otp', validateVerifyOtp, async (req, res) => {
   try {
     const { email, otp } = req.body;
 
@@ -110,7 +111,7 @@ router.post('/verify-otp', async (req, res) => {
 });
 
 // 3. API ĐĂNG NHẬP (BỔ SUNG CHẶN USER CHƯA VERIFY)
-router.post('/login', async (req, res) => {
+router.post('/login', validateLogin, async (req, res) => {
   try {
     const { credential, password } = req.body;
 
