@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const nodemailer = require('nodemailer'); // Gọi thư viện gửi mail
+const { Resend } = require('resend'); // Thay thế nodemailer bằng Resend API
 const User = require('../models/User');
 const { OAuth2Client } = require('google-auth-library');
 const { validateRegister, validateLogin, validateVerifyOtp } = require('../middleware/validateRequest');
@@ -14,22 +14,10 @@ const client = new OAuth2Client(
   'postmessage' 
 ); 
 
-// Cấu hình "Trạm gửi thư" Nodemailer (Đã tối ưu chống lỗi Connection timeout trên Render)
-const transporter = nodemailer.createTransport({
-  host: 'smtp.gmail.com',
-  port: 465,
-  secure: true, // true cho cổng 465
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS
-  },
-  tls: {
-    rejectUnauthorized: false
-  },
-  connectionTimeout: 10000, // Thiết lập timeout 10 giây để không bị treo tiến trình
-});
+// Khởi tạo đối tượng Resend để gửi mail qua HTTP API (Tránh bị chặn cổng SMTP trên Render)
+const resend = new Resend(process.env.RESEND_API_KEY);
 
-// 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP & XỬ LÝ TÀI KHOẢN CHƯA VERIFY)
+// 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP QUA RESEND API & XỬ LÝ TÀI KHOẢN CHƯA VERIFY)
 router.post('/register', validateRegister, async (req, res) => {
   try {
     const { username, email, password } = req.body;
@@ -52,9 +40,9 @@ router.post('/register', validateRegister, async (req, res) => {
       } 
       // TRƯỜNG HỢP 2: User tồn tại nhưng CHƯA XÁC THỰC -> Cập nhật lại data & cấp OTP mới (Tái chế)
       else {
-        user.username = username; // Cập nhật nhỡ họ đổi username
+        user.username = username; 
         user.email = email;
-        user.password = hashedPassword; // Cập nhật nhỡ họ gõ pass mới
+        user.password = hashedPassword; 
         user.otpCode = otp;
         user.otpExpires = otpExpires;
         await user.save();
@@ -72,9 +60,9 @@ router.post('/register', validateRegister, async (req, res) => {
       await user.save();
     }
 
-    // Tiến hành gửi Email chứa OTP về cho người dùng
-    const mailOptions = {
-      from: '"Finance Tracker" <' + process.env.EMAIL_USER + '>',
+    // Gửi Email chứa OTP thông qua Resend HTTP API
+    await resend.emails.send({
+      from: 'Finance Tracker <onboarding@resend.dev>',
       to: email,
       subject: 'Mã xác thực OTP kích hoạt tài khoản FinanceTracker',
       html: `
@@ -88,9 +76,7 @@ router.post('/register', validateRegister, async (req, res) => {
           <p style="color: #ef4444; font-size: 12px">* Mã OTP này có hiệu lực trong vòng 5 phút.</p>
         </div>
       `
-    };
-
-    await transporter.sendMail(mailOptions);
+    });
 
     res.status(201).json({ 
       success: true, 
@@ -107,18 +93,15 @@ router.post('/verify-otp', validateVerifyOtp, async (req, res) => {
   try {
     const { email, otp } = req.body;
 
-    // Tìm user theo email
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(400).json({ success: false, message: 'Không tìm thấy người dùng này' });
     }
 
-    // Kiểm tra xem OTP nhập vào có đúng không hoặc đã hết hạn chưa
     if (user.otpCode !== otp || user.otpExpires < Date.now()) {
       return res.status(400).json({ success: false, message: 'Mã OTP không chính xác hoặc đã hết hạn' });
     }
 
-    // Nếu đúng: Kích hoạt trạng thái verify, đồng thời xóa code OTP đi để bảo mật
     user.isVerified = true;
     user.otpCode = undefined;
     user.otpExpires = undefined;
@@ -140,7 +123,6 @@ router.post('/login', validateLogin, async (req, res) => {
       return res.status(400).json({ success: false, message: 'Tài khoản hoặc mật khẩu không đúng' });
     }
 
-    // ---- ĐOẠN CHECK CHẶN CHƯA VERIFY ----
     if (!user.isVerified) {
       return res.status(401).json({ 
         success: false, 
@@ -149,7 +131,6 @@ router.post('/login', validateLogin, async (req, res) => {
         message: 'Tài khoản của bạn chưa được xác thực Email.' 
       });
     }
-    // ------------------------------------
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
@@ -173,24 +154,20 @@ router.post('/google-redirect', async (req, res) => {
   try {
     const { code } = req.body;
     
-    // 1. Khởi tạo Client với Secret và Link Redirect
     const client = new OAuth2Client(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET,
       `${process.env.FRONTEND_URL}/login` 
     );
 
-    // 2. Đổi code lấy tokens từ Google
     const { tokens } = await client.getToken(code);
     
-    // 3. Lấy thông tin user từ tokens
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token,
       audience: process.env.GOOGLE_CLIENT_ID
     });
     const { email, name } = ticket.getPayload();
 
-    // 4. Logic tìm hoặc tạo User trong MongoDB
     let user = await User.findOne({ email });
     
     if (!user) {
@@ -207,7 +184,6 @@ router.post('/google-redirect', async (req, res) => {
       await user.save();
     }
 
-    // 5. Tạo JWT của ứng dụng
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
     res.status(200).json({ 
