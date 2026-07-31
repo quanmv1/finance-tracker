@@ -24,36 +24,52 @@ const transporter = nodemailer.createTransport({
 });
 
 // 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP)
+// 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP & XỬ LÝ TÀI KHOẢN CHƯA VERIFY)
 router.post('/register', validateRegister, async (req, res) => {
   try {
     const { username, email, password } = req.body;
 
-    const userExists = await User.findOne({ $or: [{ username }, { email }] });
-    if (userExists) {
-      return res.status(400).json({ success: false, message: 'Tên tài khoản hoặc Email đã tồn tại' });
-    }
+    // Tìm xem có user nào trùng username hoặc email không
+    let user = await User.findOne({ $or: [{ username }, { email }] });
 
+    // Sinh mã OTP và thời hạn mới (5 phút)
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
+    
+    // Hash mật khẩu
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Tự động sinh mã OTP ngẫu nhiên gồm 6 chữ số
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    // Cài đặt thời gian hết hạn cho OTP (Ví dụ: 5 phút tính từ bây giờ)
-    const otpExpires = new Date(Date.now() + 5 * 60 * 1000);
-
-    const newUser = new User({
-      username,
-      email,
-      password: hashedPassword,
-      otpCode: otp,
-      otpExpires
-    });
-
-    await newUser.save();
+    if (user) {
+      // TRƯỜNG HỢP 1: User đã tồn tại và ĐÃ XÁC THỰC -> Chặn lại
+      if (user.isVerified) {
+        return res.status(400).json({ success: false, message: 'Tên tài khoản hoặc Email đã được sử dụng.' });
+      } 
+      // TRƯỜNG HỢP 2: User tồn tại nhưng CHƯA XÁC THỰC -> Cập nhật lại data & cấp OTP mới (Tái chế)
+      else {
+        user.username = username; // Cập nhật nhỡ họ đổi username
+        user.email = email;
+        user.password = hashedPassword; // Cập nhật nhỡ họ gõ pass mới
+        user.otpCode = otp;
+        user.otpExpires = otpExpires;
+        await user.save();
+      }
+    } else {
+      // TRƯỜNG HỢP 3: User hoàn toàn mới -> Tạo mới tinh
+      user = new User({
+        username,
+        email,
+        password: hashedPassword,
+        otpCode: otp,
+        otpExpires,
+        isVerified: false
+      });
+      await user.save();
+    }
 
     // Tiến hành gửi Email chứa OTP về cho người dùng
     const mailOptions = {
-      from: process.env.EMAIL_USER,
+      from: '"Finance Tracker" <' + process.env.EMAIL_USER + '>',
       to: email,
       subject: 'Mã xác thực OTP kích hoạt tài khoản FinanceTracker',
       html: `
