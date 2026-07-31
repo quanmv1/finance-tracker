@@ -14,16 +14,21 @@ const client = new OAuth2Client(
   'postmessage' 
 ); 
 
-// Cấu hình "Trạm gửi thư" Nodemailer
+// Cấu hình "Trạm gửi thư" Nodemailer (Đã tối ưu chống lỗi Connection timeout trên Render)
 const transporter = nodemailer.createTransport({
-  service: 'gmail',
+  host: 'smtp.gmail.com',
+  port: 465,
+  secure: true, // true cho cổng 465
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  tls: {
+    rejectUnauthorized: false
+  },
+  connectionTimeout: 10000, // Thiết lập timeout 10 giây để không bị treo tiến trình
 });
 
-// 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP)
 // 1. API ĐĂNG KÝ (TỰ ĐỘNG BẮN EMAIL OTP & XỬ LÝ TÀI KHOẢN CHƯA VERIFY)
 router.post('/register', validateRegister, async (req, res) => {
   try {
@@ -73,7 +78,7 @@ router.post('/register', validateRegister, async (req, res) => {
       to: email,
       subject: 'Mã xác thực OTP kích hoạt tài khoản FinanceTracker',
       html: `
-        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px border-gray-200 rounded-xl">
+        <div style="font-family: Arial, sans-serif; max-width: 500px; margin: 0 auto; padding: 20px; border: 1px solid #e5e7eb; border-radius: 12px;">
           <h2 style="color: #10b981; text-align: center">Xác Thực Tài Khoản</h2>
           <p>Chào bạn <b>${username}</b>,</p>
           <p>Cảm ơn bạn đã đăng ký FinanceTracker. Mã OTP để kích hoạt tài khoản của bạn là:</p>
@@ -98,7 +103,6 @@ router.post('/register', validateRegister, async (req, res) => {
 });
 
 // 2. API XÁC MINH MÃ OTP 
-// Đường dẫn: POST /api/auth/verify-otp
 router.post('/verify-otp', validateVerifyOtp, async (req, res) => {
   try {
     const { email, otp } = req.body;
@@ -140,7 +144,7 @@ router.post('/login', validateLogin, async (req, res) => {
     if (!user.isVerified) {
       return res.status(401).json({ 
         success: false, 
-        isNotVerified: true, // Trả thêm cờ này để Frontend biết mà mở hộp nhập OTP
+        isNotVerified: true, 
         email: user.email,
         message: 'Tài khoản của bạn chưa được xác thực Email.' 
       });
@@ -190,7 +194,6 @@ router.post('/google-redirect', async (req, res) => {
     let user = await User.findOne({ email });
     
     if (!user) {
-      // Kế thừa logic tạo user an toàn từ phiên bản cũ của bạn
       const baseUsername = email.split('@')[0] + '_gg';
       const salt = await bcrypt.genSalt(10);
       const hashedRandomPassword = await bcrypt.hash(Math.random().toString(36), salt);
@@ -198,8 +201,8 @@ router.post('/google-redirect', async (req, res) => {
       user = new User({ 
         username: baseUsername, 
         email: email, 
-        password: hashedRandomPassword, // Bảo mật tốt hơn
-        isVerified: true // BẮT BUỘC: Đánh dấu đã xác thực để không bị đòi OTP
+        password: hashedRandomPassword, 
+        isVerified: true 
       });
       await user.save();
     }
@@ -207,7 +210,6 @@ router.post('/google-redirect', async (req, res) => {
     // 5. Tạo JWT của ứng dụng
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    // Trả về cho Frontend
     res.status(200).json({ 
       success: true,
       token, 
