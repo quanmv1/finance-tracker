@@ -1,6 +1,6 @@
 import { useState, useContext, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { Wallet, Lock, User, Eye, EyeOff } from 'lucide-react'; // Thêm icon Eye để làm ẩn/hiện ẩn/hiện mật khẩu
+import { Link, useLocation, useNavigate } from 'react-router-dom'; // Thêm useLocation và useNavigate
+import { Wallet, Lock, User, Eye, EyeOff } from 'lucide-react';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import { useGoogleLogin } from '@react-oauth/google';
@@ -8,28 +8,59 @@ import { validateCredential, validateLoginPassword } from '../utils/validationUt
 import authBg from '/auth-bg.png';
 
 export default function Login() {
-  // 1. Khai báo các State quản lý dữ liệu nhập vào và trạng thái ẩn/hiện
-  const [credential, setCredential] = useState(''); // Lưu Username hoặc Email linh hoạt
+  const [credential, setCredential] = useState(''); 
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false); // true: hiện chữ, false: ẩn dạng chấm ••
+  const [showPassword, setShowPassword] = useState(false); 
   const [error, setError] = useState('');
-  const [isAdBlockError, setIsAdBlockError] = useState(false); // Mặc định là false (ẩn thông báo)
-  const { login } = useContext(AuthContext); // Lấy hàm kích hoạt đăng nhập từ Context
+  const [isAdBlockError, setIsAdBlockError] = useState(false); 
   
-  // 2. Hàm xử lý khi nhấn nút Đăng nhập
+  const { login } = useContext(AuthContext); 
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // --- LOGIC MỚI: BẮT MÃ CODE KHI GOOGLE CHUYỂN HƯỚNG VỀ ---
+  useEffect(() => {
+    // Lấy chuỗi query trên URL (ví dụ: ?code=4/0AeaY...)
+    const searchParams = new URLSearchParams(location.search);
+    const code = searchParams.get('code');
+
+    if (code) {
+      // 1. Gửi code xuống Backend bằng API mới
+      axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-redirect`, { code })
+        .then(response => {
+          // 2. Nếu BE trả về token và user thành công
+          if (response.data.token) {
+            login(response.data.user, response.data.token);
+            navigate('/dashboard'); // Điều hướng vào Dashboard
+          }
+        })
+        .catch(err => {
+          console.error('Lỗi đăng nhập Google Redirect:', err);
+          setError(err.response?.data?.message || 'Xác thực Google thất bại. Vui lòng thử lại.');
+          // Xóa chữ ?code=... trên URL để tránh lỗi nếu user F5 lại trang
+          window.history.replaceState({}, document.title, window.location.pathname);
+        });
+    }
+  }, [location.search, login, navigate]);
+
+  // --- CẤU HÌNH MỚI: ĐĂNG NHẬP GOOGLE CHẾ ĐỘ REDIRECT ---
+  const loginWithGoogle = useGoogleLogin({
+    flow: 'auth-code',
+    ux_mode: 'redirect', // Ép buộc chuyển hướng toàn trang, không dùng popup
+    redirect_uri: `${window.location.origin}/login`, // Trỏ về lại chính trang này
+  });
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setIsAdBlockError(false);
 
-    // Validation credential
     const credentialError = validateCredential(credential);
     if (credentialError) {
       setError(credentialError);
       return;
     }
 
-    // Validation password
     const passwordError = validateLoginPassword(password);
     if (passwordError) {
       setError(passwordError);
@@ -37,51 +68,17 @@ export default function Login() {
     }
 
     try {
-      // Gửi request lên API mới của Backend (Chấp nhận cả email/username qua trường credential)
       const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/login`, {
         credential,
         password
       });
 
       if (response.data.success) {
-        // Nếu thành công, nạp thông tin user và token vào hệ thống để nhảy sang Dashboard
         login(response.data.user, response.data.token);
       }
     } catch (err) {
-      // Nhặt thông báo lỗi từ Backend trả về để hiển thị lên Form
       setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng thử lại!');
     }
-  };
-
-  // 3. Hàm xử lý đăng nhập bằng Google 
-  const handleGoogleSuccess = useGoogleLogin({
-    flow: 'auth-code', 
-    onSuccess: async (tokenResponse) => {
-      setIsAdBlockError(false);
-      setError('');
-      
-      try {
-        const response = await axios.post(`${import.meta.env.VITE_API_URL}/api/auth/google-login`, {
-          code: tokenResponse.code
-        });
-        if (response.data.success) {
-          login(response.data.user, response.data.token);
-        }
-      } catch (err) {
-        setError(err.response?.data?.message || 'Đăng nhập bằng Google thất bại.');
-      }
-    },
-    onError: () => {
-      setIsAdBlockError(true);
-      setError('');
-    }
-  });
-
-  // Hàm kích hoạt nút bấm
-  const handleGoogleClickWithCheck = () => {
-    setError('');
-    setIsAdBlockError(false);
-    handleGoogleSuccess();
   };
 
   return (
@@ -89,10 +86,8 @@ export default function Login() {
       className="min-h-screen bg-cover bg-center bg-no-repeat flex flex-col justify-center py-12 px-4 sm:px-6 lg:px-8 relative"
       style={{ backgroundImage: `url(${authBg})` }}
     >
-      {/* LỚP PHỦ OVERLAY: Làm tối và mờ nhẹ nền sau giúp Form màu trắng nổi bật, dễ đọc chữ */}
       <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[3px] z-0"></div>
       
-      {/* Phần Tiêu đề / Logo (Thêm z-10 để nổi lên trên lớp overlay) */}
       <div className="sm:mx-auto sm:w-full sm:max-w-md text-center relative z-10">
         <div className="flex justify-center">
           <div className="bg-emerald-500 p-3 rounded-2xl shadow-md text-white">
@@ -102,11 +97,9 @@ export default function Login() {
         <h2 className="mt-6 text-center text-3xl font-extrabold text-white drop-shadow-md">Welcome to Finance Tracker</h2>
       </div>
 
-      {/* Phần Khung Form (Thêm z-10 để nổi lên trên lớp overlay) */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md relative z-10">
         <div className="bg-white/95 backdrop-blur-sm py-8 px-4 shadow-2xl rounded-xl sm:px-10 border border-white/20 space-y-4">
           
-          {/* Ô báo lỗi màu đỏ nếu thông tin sai */}
           {(error || isAdBlockError) && (
             <div className="mb-4 p-3 bg-red-50 border border-red-200 text-red-600 text-sm rounded-lg text-center font-medium animate-fade-in">
               {error 
@@ -117,7 +110,6 @@ export default function Login() {
           )}
 
           <form className="space-y-6" onSubmit={handleSubmit}>
-            {/* Ô NHẬP CREDENTIAL (USERNAME HOẶC EMAIL) */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Tài khoản hoặc Email</label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -132,7 +124,6 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Ô NHẬP MẬT KHẨU CÓ MẮT ẨN/HIỆN */}
             <div>
               <label className="block text-sm font-medium text-gray-700">Mật khẩu</label>
               <div className="mt-1 relative rounded-md shadow-sm">
@@ -140,12 +131,11 @@ export default function Login() {
                   <Lock size={18} />
                 </div>
                 <input
-                  type={showPassword ? 'text' : 'password'} // Thay đổi type dựa trên State showPassword
+                  type={showPassword ? 'text' : 'password'}
                   required value={password} onChange={(e) => setPassword(e.target.value)}
                   className="block w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 text-sm transition-all"
                   placeholder="••••••••"
                 />
-                {/* NÚT ICON CON MẮT ĐỂ UPDATE TRẠNG THÁI SHOW/HIDE */}
                 <button
                   type="button" onClick={() => setShowPassword(!showPassword)}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
@@ -162,20 +152,17 @@ export default function Login() {
             </div>
           </form>
 
-          {/* ---- ĐOẠN ĐƯỜNG KẺ NGĂN CÁCH ---- */}
           <div className="relative my-6">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200"></div></div>
             <div className="relative flex justify-center text-sm"><span className="px-2 bg-white text-gray-500">Hoặc đăng nhập bằng</span></div>
           </div>
 
-          {/* ---- NÚT BẤM CỦA GOOGLE ---- */}
           <div className="flex justify-center w-full">
             <button 
               type="button"
-              onClick={handleGoogleClickWithCheck} 
+              onClick={() => loginWithGoogle()} 
               className="flex items-center justify-center gap-2 w-full py-2.5 border border-gray-300 rounded-lg bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500 shadow-sm transition-all"
             >
-              {/* Icon Google SVG Chuẩn */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#EA4335" d="M12 5.04c1.65 0 3.13.57 4.3 1.69l3.21-3.2C17.56 1.77 14.97 1 12 1 7.35 1 3.39 3.65 1.5 7.5l3.86 3C6.31 7.55 8.94 5.04 12 5.04z"/>
                 <path fill="#4285F4" d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.29 1.48-1.14 2.73-2.42 3.62l3.78 2.93c2.21-2.04 3.67-5.04 3.67-8.7z"/>

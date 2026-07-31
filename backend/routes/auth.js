@@ -148,68 +148,59 @@ router.post('/login', validateLogin, async (req, res) => {
   }
 });
 
-// API: ĐĂNG NHẬP / ĐĂNG KÝ NHANH BẰNG GOOGLE (POST)
-router.post('/google-login', async (req, res) => {
+// API: Nhận 'code' từ Frontend và đổi lấy Token của Google (Luồng Redirect)
+router.post('/google-redirect', async (req, res) => {
   try {
-    // 1. Thay vì googleToken, bây giờ chúng ta nhận mã 'code' từ Frontend gửi lên
     const { code } = req.body;
-
-    if (!code) {
-      return res.status(400).json({ success: false, message: 'Không tìm thấy mã xác thực từ Google' });
-    }
     
-    // 2. Sử dụng mã 'code' này để thực hiện đổi lấy các Token quyền hạn từ máy chủ Google
-    const { tokens } = await client.getToken(code);
-    client.setCredentials(tokens);
+    // 1. Khởi tạo Client với Secret và Link Redirect
+    const client = new OAuth2Client(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET,
+      `${process.env.FRONTEND_URL}/login` 
+    );
 
-    // 3. Giải mã ID Token lấy được từ cục tokens để bóc tách thông tin cá nhân của User
+    // 2. Đổi code lấy tokens từ Google
+    const { tokens } = await client.getToken(code);
+    
+    // 3. Lấy thông tin user từ tokens
     const ticket = await client.verifyIdToken({
       idToken: tokens.id_token,
       audience: process.env.GOOGLE_CLIENT_ID
     });
+    const { email, name } = ticket.getPayload();
 
-    // Lấy ra các thông tin cá nhân thật của người dùng từ hệ thống Google
-    const { email, name, picture } = ticket.getPayload();
-
-    // 4. Kiểm tra xem Email Google này đã tồn tại trong database chưa
+    // 4. Logic tìm hoặc tạo User trong MongoDB
     let user = await User.findOne({ email });
-
-    // 5. Nếu chưa có tài khoản, hệ thống tự động đăng ký luôn một tài khoản mới tinh
+    
     if (!user) {
-      // Tự sinh username ngẫu nhiên từ email (ví dụ nguyenvana@gmail.com -> nguyenvana_gg)
+      // Kế thừa logic tạo user an toàn từ phiên bản cũ của bạn
       const baseUsername = email.split('@')[0] + '_gg';
-      
-      // Tạo mật khẩu ngẫu nhiên ngầm vì họ đăng nhập bằng Google, không xài pass này
       const salt = await bcrypt.genSalt(10);
       const hashedRandomPassword = await bcrypt.hash(Math.random().toString(36), salt);
 
-      user = new User({
-        username: baseUsername,
-        email: email,
-        password: hashedRandomPassword,
-        isVerified: true // Đã xác thực bằng Google nên mặc định là true luôn, không cần gửi OTP nữa
+      user = new User({ 
+        username: baseUsername, 
+        email: email, 
+        password: hashedRandomPassword, // Bảo mật tốt hơn
+        isVerified: true // BẮT BUỘC: Đánh dấu đã xác thực để không bị đòi OTP
       });
-
       await user.save();
     }
 
-    // 6. Nếu tài khoản đã tồn tại hoặc vừa tạo xong -> Tiến hành cấp Token cá nhân (JWT) của dự án để đăng nhập
+    // 5. Tạo JWT của ứng dụng
     const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 
-    res.status(200).json({
+    // Trả về cho Frontend
+    res.status(200).json({ 
       success: true,
-      message: 'Đăng nhập bằng Google thành công!',
-      token,
-      user: {
-        id: user._id,
-        username: user.username,
-        email: user.email
-      }
+      token, 
+      user: { id: user._id, username: user.username, email: user.email } 
     });
 
   } catch (error) {
-    console.error('Lỗi xử lý Google Login Backend:', error);
-    res.status(500).json({ success: false, message: 'Lỗi xác thực Google: ' + error.message });
+    console.error('Lỗi xác thực Google Redirect:', error);
+    res.status(500).json({ success: false, message: 'Lỗi xác thực Google' });
   }
 });
 

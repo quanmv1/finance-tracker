@@ -1,5 +1,5 @@
 import { useState, useEffect, useContext } from 'react';
-import { Wallet, ArrowUpRight, ArrowDownRight, PlusCircle, Trash2, LogOut, Clock, CheckSquare, Square, X } from 'lucide-react';
+import { Wallet, ArrowUpRight, ArrowDownRight, PlusCircle, Trash2, LogOut, Clock, CheckSquare, Square, X, Calendar } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
@@ -16,6 +16,43 @@ const categoryLabels = {
   Other: 'Khác'
 };
 
+// Bộ từ điển màu sắc pastel cho các danh mục gốc
+const categoryColors = {
+  Food: 'bg-orange-100 text-orange-700 border-orange-200',
+  Rent: 'bg-blue-100 text-blue-700 border-blue-200',
+  Shopping: 'bg-purple-100 text-purple-700 border-purple-200',
+  Salary: 'bg-emerald-100 text-emerald-700 border-emerald-200',
+  Bonus: 'bg-teal-100 text-teal-700 border-teal-200',
+  Other: 'bg-gray-100 text-gray-700 border-gray-200'
+};
+
+// Bộ màu dự phòng cho các danh mục tự nhập
+const dynamicColors = [
+  'bg-pink-100 text-pink-700 border-pink-200',
+  'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'bg-yellow-100 text-yellow-700 border-yellow-200',
+  'bg-cyan-100 text-cyan-700 border-cyan-200',
+  'bg-rose-100 text-rose-700 border-rose-200',
+  'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200',
+  'bg-sky-100 text-sky-700 border-sky-200',
+  'bg-lime-100 text-lime-700 border-lime-200'
+];
+
+// Hàm hỗ trợ tự động cấp màu: Nếu là danh mục gốc thì lấy màu gốc, nếu tự nhập thì tự động gán ngẫu nhiên 1 màu cố định dựa trên tên
+const getCategoryColor = (cat) => {
+  if (categoryColors[cat]) return categoryColors[cat];
+  
+  // Thuật toán Hash để chuỗi ký tự luôn sinh ra một số cố định
+  let hash = 0;
+  for (let i = 0; i < cat.length; i++) {
+    hash = cat.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  
+  // Chọn màu từ mảng dynamicColors dựa trên số hash
+  const index = Math.abs(hash) % dynamicColors.length;
+  return dynamicColors[index];
+};
+
 export default function Dashboard() {
   const { user, token, logout } = useContext(AuthContext);
   const [transactions, setTransactions] = useState([]);
@@ -25,7 +62,7 @@ export default function Dashboard() {
   const [amount, setAmount] = useState('');
   const [type, setType] = useState('expense');
   const [category, setCategory] = useState('Food');
-  const [customCategory, setCustomCategory] = useState(''); // State mới lưu danh mục tự gõ
+  const [customCategory, setCustomCategory] = useState(''); 
 
   // ------------------------------------------
   const currentYear = new Date().getFullYear();
@@ -34,10 +71,10 @@ export default function Dashboard() {
   const [filterMonth, setFilterMonth] = useState(currentMonth);
   const [filterYear, setFilterYear] = useState(String(currentYear));
   const [selectedIds, setSelectedIds] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false); // State quản lý ẩn/hiện Modal Thêm giao dịch (Ý 2)
+  const [isModalOpen, setIsModalOpen] = useState(false); 
   // ------------------------------------------
-  const [aiAdvice, setAiAdvice] = useState(''); // Lưu câu trả lời của AI
-  const [isAiLoading, setIsAiLoading] = useState(false); // Quản lý hiệu ứng loading khi chờ AI phản hồi
+  const [aiAdvice, setAiAdvice] = useState(''); 
+  const [isAiLoading, setIsAiLoading] = useState(false); 
   const [isAiOpen, setIsAiOpen] = useState(false);
   
   const config = {
@@ -59,11 +96,9 @@ export default function Dashboard() {
     setAiAdvice('');
   }, [filterMonth, filterYear]);
 
-  // Hàm xử lý Thêm giao dịch 
   const handleAddTransaction = async (e) => {
     e.preventDefault();
     
-    // Nếu chọn danh mục là 'Other' (Khác), ta sẽ lấy giá trị tự gõ của người dùng để lưu xuống DB
     const finalCategory = category === 'Other' ? (customCategory.trim() || 'Khác') : category;
 
     try {
@@ -71,10 +106,9 @@ export default function Dashboard() {
         title, 
         amount: Number(amount), 
         type, 
-        category: finalCategory // Truyền danh mục động xuống Backend
+        category: finalCategory 
       }, config);
       
-      // Reset sạch Form và đóng Modal
       setTitle('');
       setAmount('');
       setType('expense');
@@ -82,7 +116,7 @@ export default function Dashboard() {
       setCustomCategory('');
       setIsModalOpen(false); 
       
-      fetchTransactions(); // Re-load lại danh sách dữ liệu
+      fetchTransactions(); 
     } catch (err) {
       alert('Lỗi thêm giao dịch: ' + err.response?.data?.message);
     }
@@ -149,10 +183,8 @@ export default function Dashboard() {
   const totalExpense = transactions.filter(t => t.type === 'expense').reduce((acc, t) => acc + Number(t.amount), 0);
   const balance = totalIncome - totalExpense;
 
-  // Tự động gom nhóm linh hoạt kể cả các danh mục tự nhập ngoài danh sách gốc (Ý 2.2)
   const chartData = Object.values(
     transactions.filter(t => t.type === 'expense').reduce((acc, t) => {
-      // Nếu danh mục nằm ngoài bộ từ điển gốc thì lấy chính chuỗi chữ đó hiển thị lên biểu đồ
       const displayName = categoryLabels[t.category] || t.category;
       if (!acc[t.category]) acc[t.category] = { name: displayName, value: 0 };
       acc[t.category].value += Number(t.amount);
@@ -163,7 +195,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
       {/* NAVBAR */}
-      <nav className="bg-white border-b border-gray-200 sticky top-0 z-10">
+      <nav className="bg-white border-b border-gray-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-2">
@@ -182,23 +214,22 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
         
-        {/* THANH BỘ LỌC THỜI GIAN & NÚT MỞ MODAL THÊM GIAO DỊCH (Ý 2) */}
-        <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
+        {/* THANH BỘ LỌC THỜI GIAN & NÚT MỞ MODAL THÊM GIAO DỊCH */}
+        <div className="bg-white p-4 rounded-xl border border-slate-300 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-4">
           <div className="flex flex-wrap items-center space-x-3 w-full sm:w-auto">
             <span className="text-sm font-bold text-gray-700 whitespace-nowrap">Báo cáo của:</span>
-            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="border border-gray-200 rounded-lg p-2 text-sm bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <select value={filterMonth} onChange={e => setFilterMonth(e.target.value)} className="border border-slate-300 rounded-lg p-2 text-sm bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
               {Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0')).map(m => (
                 <option key={m} value={m}>Tháng {m}</option>
               ))}
             </select>
-            <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="border border-gray-200 rounded-lg p-2 text-sm bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
+            <select value={filterYear} onChange={e => setFilterYear(e.target.value)} className="border border-slate-300 rounded-lg p-2 text-sm bg-gray-50 font-medium focus:outline-none focus:ring-2 focus:ring-emerald-500">
               {Array.from({ length: new Date().getFullYear() - 2026 + 1 }, (_, index) => 2026 + index).map(y => (
                 <option key={y} value={String(y)}>Năm {y}</option>
               ))}
             </select>
           </div>
           
-          {/* NÚT BẤM KÍCH HOẠT HIỆN MODAL THÊM GIAO DỊCH CHUYÊN NGHIỆP */}
           <button 
             onClick={() => setIsModalOpen(true)}
             className="w-full sm:w-auto flex items-center justify-center space-x-1 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold px-4 py-2.5 rounded-xl shadow-sm transition-colors"
@@ -208,65 +239,52 @@ export default function Dashboard() {
           </button>
         </div>
 
-        {/* THẺ THỐNG KÊ */}
+        {/* THẺ THỐNG KÊ MỚI: BỚT CHÓI VÀ HIỆN ĐẠI HƠN */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Thẻ Số dư - Gradient Xanh Dương */}
-          <div className="bg-linear-to-br from-indigo-500 via-purple-500 to-blue-600 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex items-center justify-between">
+          
+          {/* Thẻ Số dư */}
+          <div className="bg-indigo-50/60 border border-indigo-500 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group">
             <div>
-              <p className="text-xs font-semibold text-indigo-100 uppercase tracking-wider">Số dư trong tháng</p>
-              <h3 className="text-2xl font-black mt-1 drop-shadow-sm">
+              <p className="text-xs font-bold text-indigo-400/80 uppercase tracking-wider">Số dư trong tháng</p>
+              <h3 className="text-2xl font-black mt-1 text-indigo-800/70">
                 {balance.toLocaleString()} đ
               </h3>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-md text-white rounded-xl shadow-inner">
+            <div className="p-3 bg-indigo-100/50 text-indigo-500/80 rounded-xl group-hover:scale-105 transition-transform duration-300">
               <Wallet size={24} />
             </div>
           </div>
 
-          {/* Thẻ Thu nhập - Gradient Xanh Lục */}
-          <div className="bg-linear-to-br from-emerald-500 via-teal-500 to-cyan-600 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex items-center justify-between">
+          {/* Thẻ Thu nhập */}
+          <div className="bg-emerald-50/60 border border-emerald-500 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group">
             <div>
-              <p className="text-xs font-semibold text-emerald-100 uppercase tracking-wider">Thu nhập tháng này</p>
-              <h3 className="text-2xl font-black mt-1 drop-shadow-sm">
+              <p className="text-xs font-bold text-emerald-400/80 uppercase tracking-wider">Thu nhập tháng này</p>
+              <h3 className="text-2xl font-black mt-1 text-emerald-800/70">
                 +{totalIncome.toLocaleString()} đ
               </h3>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-md text-white rounded-xl shadow-inner">
+            <div className="p-3 bg-emerald-100/50 text-emerald-500/80 rounded-xl group-hover:scale-105 transition-transform duration-300">
               <ArrowUpRight size={24} />
             </div>
           </div>
 
-          {/* Thẻ Chi tiêu - Gradient Đỏ Hồng */}
-          <div className="bg-linear-to-br from-rose-500 via-pink-500 to-red-600 p-6 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 text-white flex items-center justify-between">
+          {/* Thẻ Chi tiêu */}
+          <div className="bg-rose-50/60 border border-rose-500 p-6 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 flex items-center justify-between group">
             <div>
-              <p className="text-xs font-semibold text-rose-100 uppercase tracking-wider">Chi tiêu tháng này</p>
-              <h3 className="text-2xl font-black mt-1 drop-shadow-sm">
+              <p className="text-xs font-bold text-rose-400/80 uppercase tracking-wider">Chi tiêu tháng này</p>
+              <h3 className="text-2xl font-black mt-1 text-rose-800/70">
                 -{totalExpense.toLocaleString()} đ
               </h3>
             </div>
-            <div className="p-3 bg-white/20 backdrop-blur-md text-white rounded-xl shadow-inner">
+            <div className="p-3 bg-rose-100/50 text-rose-500/80 rounded-xl group-hover:scale-105 transition-transform duration-300">
               <ArrowDownRight size={24} />
             </div>
           </div>
+
         </div>      
-        {/*
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-            <div><p className="text-sm font-medium text-gray-500">Số dư trong tháng</p><h3 className="text-2xl font-bold mt-1 text-gray-900">{balance.toLocaleString()} đ</h3></div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Wallet size={24} /></div>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-            <div><p className="text-sm font-medium text-gray-500">Thu nhập tháng này</p><h3 className="text-2xl font-bold mt-1 text-emerald-600">+{totalIncome.toLocaleString()} đ</h3></div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><ArrowUpRight size={24} /></div>
-          </div>
-          <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center justify-between">
-            <div><p className="text-sm font-medium text-gray-500">Chi tiêu tháng này</p><h3 className="text-2xl font-bold mt-1 text-red-600">-{totalExpense.toLocaleString()} đ</h3></div>
-            <div className="p-3 bg-red-50 text-red-600 rounded-xl"><ArrowDownRight size={24} /></div>
-          </div>
-        </div>
-        */}
-        {/* BIỂU ĐỒ TRÒN (CHIẾM TOÀN BỘ ĐỘ RỘNG MÀN HÌNH KHÔNG BỊ FORM CHE KHUẤT) */}
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex flex-col justify-between w-full">
+
+        {/* BIỂU ĐỒ TRÒN */}
+        <div className="bg-white p-6 rounded-2xl border border-slate-300 shadow-sm flex flex-col justify-between w-full">
           <h4 className="font-bold text-lg text-gray-900">Phân tích chi tiêu theo danh mục</h4>
           <div className="h-72 w-full mt-4">
             {chartData.length > 0 ? (
@@ -285,25 +303,23 @@ export default function Dashboard() {
           </div>
         </div>
 
-        {/* 🤖 KHU VỰC TRỢ LÝ TÀI CHÍNH THÔNG MINH AI */}
+        {/* KHU VỰC TRỢ LÝ TÀI CHÍNH THÔNG MINH AI */}
         <div 
-          onClick={() => aiAdvice && setIsAiOpen(!isAiOpen)} // Click vào vùng bao bọc để đóng/mở khi đã có kết quả
-          className={`p-6 rounded-2xl border shadow-sm space-y-4 transition-all duration-300 ${
+          onClick={() => aiAdvice && setIsAiOpen(!isAiOpen)} 
+          className={`p-6 rounded-2xl border border-purple-400 shadow-sm space-y-4 transition-all duration-300 ${
             aiAdvice ? 'cursor-pointer hover:shadow-md' : 'cursor-default'
           } ${
-            isAiOpen ? 'bg-linear-to-r from-purple-50 to-indigo-50 border-purple-200' : 'bg-white border-gray-100'
+            isAiOpen ? 'bg-gradient-to-r from-purple-50 to-indigo-50 border-purple-200' : 'bg-white border-gray-100'
           }`}
         >
           <div className="flex items-center justify-between flex-wrap gap-x-2 gap-y-3">
             <div className="flex items-center space-x-2">
-              {/* Icon tự động xoay khi AI đang load, hết load sẽ bounce nhẹ */}
               <div className={`p-2 rounded-xl text-white transition-all ${isAiLoading ? 'bg-purple-400 animate-spin' : 'bg-purple-600 animate-bounce'}`}>
                 <PlusCircle size={20} /> 
               </div>
               <div>
                 <h4 className="font-extrabold text-sm sm:text-lg text-purple-900 flex items-center flex-wrap gap-2">
                   <span>Trợ lý Phân tích Tài chính AI</span>
-                  {/* Nhãn trạng thái hỗ trợ UX */}
                   {aiAdvice && (
                     <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full transition-all ${isAiOpen ? 'bg-purple-200 text-purple-800' : 'bg-gray-100 text-gray-600'}`}>
                       {isAiOpen ? 'Click để thu gọn ↩' : 'Có lời khuyên! Click để xem 👁️'}
@@ -314,7 +330,6 @@ export default function Dashboard() {
               </div>
             </div>
             
-            {/* NÚT KÍCH HOẠT QUÉT AI */}
             <button
               onClick={(e) => {
                 e.stopPropagation(); 
@@ -337,7 +352,6 @@ export default function Dashboard() {
             </button>
           </div>
 
-          {/* KẾT QUẢ AI PHẢN HỒI */}
           {aiAdvice && isAiOpen && (
             <div 
               onClick={(e) => e.stopPropagation()} 
@@ -348,86 +362,97 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* BẢNG LỊCH SỬ GIAO DỊCH */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4">
-            <h4 className="font-bold text-lg text-gray-900">Lịch sử giao dịch gần đây</h4>
+        {/* BẢNG LỊCH SỬ GIAO DỊCH UI MỚI */}
+        <div className="bg-white rounded-2xl shadow-md border border-slate-300 overflow-hidden">
+          <div className="p-6 border-b border-gray-100 flex items-center justify-between flex-wrap gap-4 bg-white">
+            <h4 className="font-bold text-lg text-slate-800">Lịch sử giao dịch gần đây</h4>
             {selectedIds.length > 0 && (
-              <button onClick={handleUrlDeleteMultiple} className="flex items-center space-x-1 bg-red-50 text-red-600 hover:bg-red-100 text-xs font-bold px-3 py-2 rounded-lg transition-colors border border-red-200">
+              <button onClick={handleUrlDeleteMultiple} className="flex items-center space-x-1 bg-rose-50 text-rose-600 hover:bg-rose-100 hover:border-rose-200 text-xs font-bold px-4 py-2 rounded-lg transition-colors border border-rose-100">
                 <Trash2 size={14} /> <span>Xóa {selectedIds.length} mục đã chọn</span>
               </button>
             )}
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-150"> {/* Thêm min-w để ép bảng có độ rộng tối thiểu khi cuộn, tránh co rúm chữ */}
+            <table className="w-full text-left border-collapse min-w-[800px]">
               <thead>
-                <tr className="bg-gray-50 text-gray-400 text-[10px] sm:text-xs font-semibold uppercase border-b border-gray-100">
-                  {/* Ô CHECKBOX CHỌN TẤT CẢ */}
-                  <th className="p-3 sm:p-4 w-12 text-center">
-                    <button type="button" onClick={handleSelectAll} className="text-gray-500 hover:text-gray-700">
+                <tr className="bg-slate-900 text-slate-100 text-xs font-semibold uppercase tracking-wider">
+                  <th className="p-4 w-12 text-center">
+                    <button type="button" onClick={handleSelectAll} className="text-slate-400 hover:text-white transition-colors">
                       {selectedIds.length === transactions.length && transactions.length > 0 ? (
-                        <CheckSquare size={16} className="text-emerald-600 sm:size-4.5" />
+                        <CheckSquare size={16} className="text-emerald-400" />
                       ) : (
-                        <Square size={16} className="sm:size-4.5" />
+                        <Square size={16} />
                       )}
                     </button>
                   </th>
-                  <th className="p-3 sm:p-4">Nội dung</th>
-                  <th className="p-3 sm:p-4">Danh mục</th>
-                  <th className="p-3 sm:p-4">
+                  <th className="p-4">Tên giao dịch</th>
+                  <th className="p-4">Danh mục</th>
+                  <th className="p-4">Giá (VNĐ)</th>
+                  <th className="p-4">
                     <span className="flex items-center space-x-1">
-                      <Clock size={12} className="sm:size-3.5" />
-                      <span>Thời gian tạo</span>
+                      <Calendar size={14} />
+                      <span>Thời gian</span>
                     </span>
                   </th>
-                  <th className="p-3 sm:p-4 text-right">Số tiền</th>
-                  <th className="p-3 sm:p-4 text-center">Thao tác</th>
+                  <th className="p-4 text-center">Thao tác</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100 text-xs sm:text-sm"> {/* Hạ từ text-sm xuống text-xs trên mobile để chữ gọn gàng */}
+              <tbody className="divide-y divide-gray-100 text-sm">
                 {transactions.length > 0 ? (
                   transactions.map((t) => (
-                    <tr key={t._id} className={`hover:bg-gray-50 transition-colors ${selectedIds.includes(t._id) ? 'bg-emerald-50/40 hover:bg-emerald-50/60' : ''}`}>
-                      {/* CỘT CHECKBOX */}
-                      <td className="p-3 sm:p-4 text-center">
-                        <button type="button" onClick={() => handleSelectId(t._id)} className="text-gray-400 hover:text-gray-600">
+                    <tr 
+                      key={t._id} 
+                      className={`hover:bg-slate-50 transition-colors ${selectedIds.includes(t._id) ? 'bg-emerald-50/30' : 'bg-white'}`}
+                    >
+                      <td className="p-4 text-center">
+                        <button type="button" onClick={() => handleSelectId(t._id)} className="text-gray-300 hover:text-emerald-600 transition-colors">
                           {selectedIds.includes(t._id) ? (
-                            <CheckSquare size={16} className="text-emerald-600 sm:size-4.5" />
+                            <CheckSquare size={16} className="text-emerald-600" />
                           ) : (
-                            <Square size={16} className="sm:size-4.5" />
+                            <Square size={16} />
                           )}
                         </button>
                       </td>
-                      {/* NỘI DUNG GIAO DỊCH */}
-                      <td className="p-3 sm:p-4 font-semibold text-gray-900 wrap-break-word max-w-37.5 sm:max-w-none">
+
+                      <td className="p-4 font-bold text-slate-800 wrap-break-word">
                         {t.title}
                       </td>
-                      {/* DANH MỤC */}
-                      <td className="p-3 sm:p-4">
-                        <span className="px-2 py-0.5 sm:py-1 bg-gray-100 rounded-full text-[10px] sm:text-xs text-gray-600 font-medium whitespace-nowrap">
+
+                      <td className="p-4">
+                        <span className={`px-3 py-1.5 rounded-full text-[11px] font-bold border whitespace-nowrap shadow-sm ${getCategoryColor(t.category)}`}>
                           {categoryLabels[t.category] || t.category}
                         </span>
                       </td>
-                      {/* THỜI GIAN */}
-                      <td className="p-3 sm:p-4 text-gray-500 whitespace-nowrap">
-                        {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(t.createdAt).toLocaleDateString('vi-VN')}
+
+                      <td className={`p-4 font-extrabold whitespace-nowrap tracking-wide ${t.type === 'income' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                        {t.type === 'income' ? '+ ' : '- '}{t.amount.toLocaleString()}đ
                       </td>
-                      {/* SỐ TIỀN */}
-                      <td className={`p-3 sm:p-4 font-bold text-right whitespace-nowrap ${t.type === 'income' ? 'text-emerald-600' : 'text-red-600'}`}>
-                        {t.type === 'income' ? '+' : '-'}{t.amount.toLocaleString()} đ
+
+                      <td className="p-4 text-slate-500 text-xs font-medium whitespace-nowrap">
+                        <div className="flex flex-col gap-0.5">
+                          <span>{new Date(t.createdAt).toLocaleDateString('vi-VN')}</span>
+                          <span className="text-slate-400 text-[11px] flex items-center gap-1">
+                            <Clock size={10}/> {new Date(t.createdAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                          </span>
+                        </div>
                       </td>
-                      {/* THAO TÁC XÓA */}
-                      <td className="p-3 sm:p-4 text-center">
-                        <button onClick={() => handleDeleteOne(t._id)} className="text-gray-400 hover:text-red-600 p-1 rounded-md transition-colors">
-                          <Trash2 size={14} className="sm:size-4" />
-                        </button>
+
+                      <td className="p-4">
+                        <div className="flex items-center justify-center">
+                          <button 
+                            onClick={() => handleDeleteOne(t._id)} 
+                            className="flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 border border-transparent hover:border-rose-200 rounded-lg text-xs font-bold transition-all"
+                          >
+                            <Trash2 size={14} /> <span>Xóa</span>
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
                 ) : (
                   <tr>
-                    <td colSpan="6" className="p-8 text-center text-gray-400 text-xs sm:text-sm font-medium">
+                    <td colSpan="6" className="p-12 text-center text-slate-400 text-sm font-medium bg-slate-50/50">
                       Không tìm thấy dữ liệu giao dịch trong tháng này.
                     </td>
                   </tr>
@@ -438,14 +463,11 @@ export default function Dashboard() {
         </div>
       </main>
 
-      {/* ========================================================== */}
-      {/* 📦 TOÀN BỘ GIAO DIỆN MODAL POPUP THÊM GIAO DỊCH */}
-      {/* ========================================================== */}
+      {/* POPUP THÊM GIAO DỊCH */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white rounded-2xl max-w-md w-full shadow-xl border border-gray-100 p-6 relative space-y-4">
             
-            {/* Nút đóng X ở góc Modal */}
             <button 
               onClick={() => { setIsModalOpen(false); setCategory('Food'); setCustomCategory(''); }}
               className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 p-1 rounded-lg transition-colors"
@@ -483,12 +505,11 @@ export default function Dashboard() {
                     <option value="Shopping">🛍️ Mua sắm</option>
                     <option value="Salary">💵 Tiền lương</option>
                     <option value="Bonus">🎁 Tiền thưởng</option>
-                    <option value="Other">✨ Khác (Tự nhập)</option> {/* Option kích hoạt tính năng tự chọn (Ý 2.1) */}
+                    <option value="Other">✨ Khác (Tự nhập)</option>
                   </select>
                 </div>
               </div>
 
-              {/* 💡 Ô NHẬP DANH MỤC TÙY CHỌN (Chỉ hiện ra khi chọn mục "Khác (Tự nhập)") (Ý 2.1) */}
               {category === 'Other' && (
                 <div className="bg-emerald-50/50 p-3 rounded-xl border border-emerald-100 animate-slide-down">
                   <label className="block text-xs font-bold text-emerald-700 uppercase">Nhập tên danh mục mới của bạn</label>
